@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="bn" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admission Exam Studio - ভর্তি পরীক্ষা প্রস্তুতি ও AI কুইজ মেকার</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Hind Siliguri & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Alpine.js for lightweight reactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        academic: {
+                            green: '#059669',
+                            red: '#dc2626',
+                            gold: '#d97706',
+                            paper: '#fffdf9',
+                            border: '#e2e8f0'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Hind Siliguri', 'Inter', 'sans-serif'],
+                        bangla: ['Hind Siliguri', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Hind Siliguri', 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .paper-texture {
+            background-color: #ffffff;
+            background-image: radial-gradient(#e2e8f0 0.75px, transparent 0.75px);
+            background-size: 16px 16px;
+        }
+        .omr-radio:checked + label {
+            background-color: #0284c7;
+            color: #ffffff;
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+        }
+        .print-only {
+            display: none;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; font-size: 12pt; }
+            .paper-texture { background: none !important; border: none !important; }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 antialiased flex flex-col min-h-screen" x-data="admissionApp()" x-init="initApp()">
+
+    <!-- Header / Navbar -->
+    <header class="no-print bg-slate-900 text-white sticky top-0 z-40 shadow-md border-b border-slate-800">
+        <div class="max-w-7xl mx-mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3 space-x-reverse cursor-pointer" @click="activeTab = 'quizzes'">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-sky-500 to-emerald-400 flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight text-slate-100 flex items-center gap-2">
+                            ভর্তি পরীক্ষা স্টুডিও
+                            <span class="text-[10px] bg-sky-500/20 text-sky-300 font-normal px-2 py-0.5 rounded-full border border-sky-500/30">AI PRO</span>
+                        </h1>
+                        <p class="text-xs text-slate-400">Admission Test Generator & Smart Exam Engine</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden md:flex items-center space-x-1 space-x-reverse font-medium text-sm">
+                    <button @click="activeTab = 'quizzes'" :class="activeTab === 'quizzes' ? 'bg-sky-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'" class="px-3 py-2 rounded-md transition flex items-center gap-2">
+                        <i class="fa-solid fa-book-bookmark"></i> কুইজ ব্যাংক
+                    </button>
+                    <button @click="activeTab = 'generator'" :class="activeTab === 'generator' ? 'bg-sky-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'" class="px-3 py-2 rounded-md transition flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> ছবি দিয়ে AI কুইজ
+                    </button>
+                    <button @click="activeTab = 'settings'" :class="activeTab === 'settings' ? 'bg-sky-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'" class="px-3 py-2 rounded-md transition flex items-center gap-2">
+                        <i class="fa-solid fa-key text-xs"></i> API সেটিং
+                    </button>
+                </nav>
+
+                <!-- Actions / Controls -->
+                <div class="flex items-center space-x-2 space-x-reverse">
+                    <button @click="soundEnabled = !soundEnabled" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition" :title="soundEnabled ? 'সাউন্ড বন্ধ করুন' : 'সাউন্ড চালু করুন'">
+                        <i class="fa-solid" :class="soundEnabled ? 'fa-volume-high text-emerald-400' : 'fa-volume-xmark text-slate-500'"></i>
+                    </button>
+                    <button @click="activeTab = 'generator'" class="md:hidden bg-sky-600 hover:bg-sky-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                        <i class="fa-solid fa-camera"></i> ছবি তুলুন
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Nav Bar -->
+        <div class="md:hidden bg-slate-950 border-t border-slate-800 px-2 py-2 flex justify-around text-xs">
+            <button @click="activeTab = 'quizzes'" :class="activeTab === 'quizzes' ? 'text-sky-400 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1">
+                <i class="fa-solid fa-book-bookmark text-base mb-0.5"></i> কুইজ ব্যাংক
+            </button>
+            <button @click="activeTab = 'generator'" :class="activeTab === 'generator' ? 'text-sky-400 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-300 text-base mb-0.5"></i> AI কুইজ
+            </button>
+            <button @click="activeTab = 'settings'" :class="activeTab === 'settings' ? 'text-sky-400 font-bold' : 'text-slate-400'" class="flex flex-col items-center py-1">
+                <i class="fa-solid fa-key text-base mb-0.5"></i> API কী
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
+
+        <!-- Custom Alert / Toast Notification -->
+        <div x-show="toast.show" x-transition 
+             class="fixed bottom-5 right-5 z-50 max-w-md bg-slate-900 text-white p-4 rounded-xl shadow-2xl border flex items-center gap-3"
+             :class="toast.type === 'error' ? 'border-red-500' : (toast.type === 'success' ? 'border-emerald-500' : 'border-sky-500')">
+            <div class="text-xl" :class="toast.type === 'error' ? 'text-red-400' : (toast.type === 'success' ? 'text-emerald-400' : 'text-sky-400')">
+                <i class="fa-solid" :class="toast.type === 'error' ? 'fa-circle-exclamation' : (toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-info')"></i>
+            </div>
+            <div class="flex-1 text-sm font-medium" x-text="toast.message"></div>
+            <button @click="toast.show = false" class="text-slate-400 hover:text-white p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- 1. QUIZZES LIBRARY TAB -->
+        <div x-show="activeTab === 'quizzes'" x-transition class="space-y-6">
+            <div class="bg-gradient-to-r from-slate-900 to-sky-900 text-white rounded-2xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+                <div class="absolute right-0 top-0 opacity-10 translate-x-10 -translate-y-10 text-9xl">
+                    <i class="fa-solid fa-book-open"></i>
+                </div>
+                <div class="relative z-10 max-w-2xl">
+                    <span class="bg-sky-500/20 text-sky-300 text-xs font-semibold px-3 py-1 rounded-full border border-sky-400/30">স্বাগতম!</span>
+                    <h2 class="text-2xl sm:text-3xl font-bold mt-2">বিশ্ববিদ্যালয় ভর্তি কুইজ ও এক্সাম ব্যাংক</h2>
+                    <p class="text-slate-300 text-sm mt-2 leading-relaxed">
+                        বইয়ের পৃষ্ঠা, স্যারের লেকচার শীট বা যেকোনো নোটের ছবি তুলে মুহূর্তেই এআই দিয়ে পূর্ণাঙ্গ মডেল টেস্ট তৈরি করুন।
+                        নিচে আপনার তৈরি করা টেস্টগুলো পাবেন।
+                    </p>
+                    <div class="mt-5 flex flex-wrap items-center gap-3">
+                        <button @click="activeTab = 'generator'" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-lg flex items-center gap-2">
+                            <i class="fa-solid fa-plus-circle"></i> ছবি তুলে নতুন কুইজ তৈরি করুন
+                        </button>
+                        <button @click="triggerJSONImport()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2.5 rounded-xl text-sm transition flex items-center gap-2">
+                            <i class="fa-solid fa-file-import"></i> JSON ফাইল ইমপোর্ট
+                        </button>
+                        <input type="file" id="jsonInput" accept=".json" class="hidden" @change="importQuizJSON($event)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz List Header -->
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-sky-600"></i> আপনার কুইজসমূহ (<span x-text="savedQuizzes.length"></span>)
+                </h3>
+                <span class="text-xs text-slate-500">স্বয়ংক্রিয়ভাবে সংরক্ষিত থাকে</span>
+            </div>
+
+            <!-- Quiz Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <template x-for="(quiz, index) in savedQuizzes" :key="quiz.id">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between group relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1.5 h-full bg-sky-500"></div>
+                        
+                        <div>
+                            <div class="flex items-start justify-between gap-2">
+                                <span class="bg-sky-50 text-sky-700 font-semibold text-xs px-2.5 py-1 rounded-md border border-sky-100" x-text="quiz.subject || 'সাধারণ'"></span>
+                                <div class="flex items-center gap-1">
+                                    <button @click="exportQuizJSON(quiz)" title="JSON ডাউনলোড" class="p-1.5 text-slate-400 hover:text-sky-600 rounded transition">
+                                        <i class="fa-solid fa-download text-xs"></i>
+                                    </button>
+                                    <button x-show="!quiz.isPreloaded" @click="deleteQuiz(quiz.id)" title="মুছে ফেলুন" class="p-1.5 text-slate-400 hover:text-red-600 rounded transition">
+                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <h4 class="font-bold text-slate-900 text-base mt-3 group-hover:text-sky-600 transition line-clamp-2" x-text="quiz.title"></h4>
+                            <p class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                                <span><i class="fa-regular fa-folder"></i> <span x-text="quiz.chapter || 'অধ্যায় উল্লেখ নেই'"></span></span>
+                            </p>
+
+                            <!-- Meta Info -->
+                            <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100 text-center text-xs">
+                                <div class="bg-slate-50 p-2 rounded-lg">
+                                    <div class="font-bold text-slate-800" x-text="quiz.questions.length"></div>
+                                    <div class="text-slate-400 text-[10px]">প্রশ্ন</div>
+                                </div>
+                                <div class="bg-slate-50 p-2 rounded-lg">
+                                    <div class="font-bold text-slate-800" x-text="quiz.timeLimit + ' মিনিট'"></div>
+                                    <div class="text-slate-400 text-[10px]">সময়</div>
+                                </div>
+                                <div class="bg-slate-50 p-2 rounded-lg">
+                                    <div class="font-bold text-slate-800 text-emerald-600" x-text="quiz.lastScore !== undefined ? quiz.lastScore + '/' + quiz.questions.length : 'দেওয়া হয়নি'"></div>
+                                    <div class="text-slate-400 text-[10px]">সর্বশেষ স্কোর</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-5 pt-3 flex items-center justify-between gap-2 border-t border-slate-100">
+                            <span class="text-[11px] text-slate-400" x-text="formatDate(quiz.createdAt)"></span>
+                            <button @click="startExam(quiz)" class="bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-play"></i> পরীক্ষা দিন
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- 2. AI QUIZ GENERATOR TAB (VISION IMAGE UPLOAD) -->
+        <div x-show="activeTab === 'generator'" x-transition class="max-w-4xl mx-auto space-y-6">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                <div class="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl font-bold">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">ছবি থেকে ভর্তি পরীক্ষার MCQ তৈরি (Gemini AI Vision)</h2>
+                        <p class="text-xs text-slate-500">বই, গাইড, হ্যান্ডনোট বা প্রশ্নপত্রের ছবি তুলুন বা আপলোড করুন। AI স্বয়ংক্রিয়ভাবে অপশন ও ব্যাখ্যা সহ প্রশ্ন তৈরি করবে।</p>
+                    </div>
+                </div>
+
+                <!-- Step 1: Upload Image -->
+                <div class="space-y-4">
+                    <label class="block text-sm font-bold text-slate-800">
+                        ১. ক্লাসের নোট বা বইয়ের পাতার ছবি সিলেক্ট করুন (Image Upload) <span class="text-red-500">*</span>
+                    </label>
+
+                    <div class="border-2 border-dashed border-slate-300 hover:border-sky-500 bg-slate-50/50 hover:bg-sky-50/30 rounded-2xl p-6 text-center transition cursor-pointer relative"
+                         @dragover.prevent="" @drop.prevent="handleImageDrop($event)">
+                        
+                        <input type="file" id="imageInput" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="handleImageSelect($event)">
+                        
+                        <div x-show="!imagePreview" class="space-y-3">
+                            <div class="w-16 h-16 mx-auto rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-2xl">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-slate-700">ছবি এখানে ড্র্যাগ করুন অথবা ক্লিক করে পছন্দ করুন</p>
+                                <p class="text-xs text-slate-400 mt-1">JPG, PNG, WEBP (সর্বোচ্চ 10MB)</p>
+                            </div>
+                        </div>
+
+                        <!-- Image Preview -->
+                        <div x-show="imagePreview" class="relative inline-block">
+                            <img :src="imagePreview" class="max-h-64 mx-auto rounded-xl shadow-md border border-slate-200 object-contain">
+                            <button @click.stop="clearImage()" class="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full shadow-lg flex items-center justify-center text-sm transition">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Options Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">বিষয় (Subject)</label>
+                            <input type="text" x-model="genConfig.subject" placeholder="যেমন: বাংলা ১ম পত্র, পদার্থবিজ্ঞান" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">অধ্যায় / টপিক (Chapter / Topic)</label>
+                            <input type="text" x-model="genConfig.chapter" placeholder="যেমন: সমাস, ভেক্টর, গতিবিদ্যা" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">প্রশ্ন সংখ্যা (Question Count)</label>
+                            <select x-model="genConfig.questionCount" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                                <option value="5">৫টি প্রশ্ন</option>
+                                <option value="10">১০টি প্রশ্ন</option>
+                                <option value="15">১৫টি প্রশ্ন</option>
+                                <option value="20">২০টি প্রশ্ন</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">সময়সীমা (Time Limit)</label>
+                            <select x-model="genConfig.timeLimit" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                                <option value="5">৫ মিনিট</option>
+                                <option value="10">১০ মিনিট</option>
+                                <option value="15">১৫ মিনিট</option>
+                                <option value="20">২০ মিনিট</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Negative Marking Toggle -->
+                    <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-circle-minus text-amber-500"></i>
+                            <div>
+                                <div class="text-xs font-bold text-slate-800">নেগেটিভ মার্কিং (০.২৫ কাটবে)</div>
+                                <div class="text-[11px] text-slate-500">ঢাবি/রাবি স্ট্যান্ডার্ড নেগেটিভ মার্কিং হিসাব করা হবে</div>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" x-model="genConfig.hasNegativeMarking" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                        </label>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <div class="pt-4">
+                        <button @click="generateQuizFromImage()" 
+                                :disabled="isGenerating || !imagePreview"
+                                class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-base">
+                            <template x-if="!isGenerating">
+                                <span class="flex items-center gap-2">
+                                    <i class="fa-solid fa-sparkles"></i> AI দিয়ে প্রশ্ন জেনারেট করুন
+                                </span>
+                            </template>
+                            <template x-if="isGenerating">
+                                <span class="flex items-center gap-2">
+                                    <i class="fa-solid fa-circle-notch fa-spin"></i> ছবি বিশ্লেষণ করে প্রশ্ন তৈরি হচ্ছে...
+                                </span>
+                            </template>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. API SETTINGS TAB -->
+        <div x-show="activeTab === 'settings'" x-transition class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+                <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Gemini API Key সেটআপ</h2>
+                        <p class="text-xs text-slate-500">আপনার নিজস্ব ফ্রী Google AI Studio Gemini Key এখানে সেভ করুন</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Google Gemini API Key</label>
+                        <input type="password" x-model="apiKey" placeholder="AIzaSy..." class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:outline-none font-mono">
+                    </div>
+
+                    <div class="bg-sky-50 border border-sky-100 rounded-xl p-4 text-xs text-sky-900 space-y-2">
+                        <div class="font-bold flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-info"></i> কিভাবে বিনামূল্যে Gemini Key পাবেন:
+                        </div>
+                        <ol class="list-decimal list-inside space-y-1 text-slate-700">
+                            <li><a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-sky-600 underline font-semibold">Google AI Studio</a> ওয়েবসাইটে যান।</li>
+                            <li>আপনার Google অ্যাকাউন্ট দিয়ে লগইন করুন।</li>
+                            <li><b>"Create API key"</b> এ ক্লিক করে কী কপি করে নিন।</li>
+                            <li>এখানে পেস্ট করে 'সংরক্ষণ করুন' বাটনে চাপুন।</li>
+                        </ol>
+                    </div>
+
+                    <button @click="saveApiKey()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition shadow-sm">
+                        সংরক্ষণ করুন
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. ACTIVE EXAM PAPER UI (AUTHENTIC UNIVERSITY PAPER STYLED) -->
+        <div x-show="activeTab === 'exam'" x-transition class="space-y-6">
+            <template x-if="currentQuiz">
+                <div class="paper-texture border-2 border-slate-300 rounded-2xl p-4 sm:p-8 shadow-xl max-w-5xl mx-auto relative bg-white">
+                    
+                    <!-- Exam Header Banner (DU/RU Style Stamp) -->
+                    <div class="no-print border-b-2 border-slate-900 pb-4 mb-6 text-center space-y-1">
+                        <div class="flex items-center justify-between text-xs text-slate-500 border-b border-slate-200 pb-2 mb-2">
+                            <span>বিশ্ববিদ্যালয় ভর্তি পরীক্ষা মডেল টেস্ট</span>
+                            <span class="font-bold text-slate-700" x-text="currentQuiz.subject + ' (' + currentQuiz.chapter + ')'"></span>
+                            <span>সেট কোড: A-1</span>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-bangla" x-text="currentQuiz.title"></h2>
+                        <div class="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-slate-700 pt-1">
+                            <span>মোট নম্বর: <span class="text-sky-600" x-text="currentQuiz.questions.length"></span></span>
+                            <span>•</span>
+                            <span>সময়: <span class="text-sky-600" x-text="currentQuiz.timeLimit + ' মিনিট'"></span></span>
+                            <span>•</span>
+                            <span>নেগেটিভ মার্ক: <span class="text-red-600">0.25</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Sticky Timer Bar -->
+                    <div class="sticky top-16 z-30 bg-slate-900 text-white rounded-xl p-3 shadow-lg flex items-center justify-between gap-4 mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-lg">
+                                <i class="fa-solid fa-stopwatch" :class="timeLeft < 60 ? 'animate-pulse text-red-400' : ''"></i>
+                            </div>
+                            <div>
+                                <div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">অবশিষ্ট সময়</div>
+                                <div class="text-lg font-mono font-bold tracking-wider" :class="timeLeft < 60 ? 'text-red-400' : 'text-emerald-400'" x-text="formatTimer(timeLeft)"></div>
+                            </div>
+                        </div>
+
+                        <!-- Question Navigator Summary -->
+                        <div class="hidden sm:flex items-center gap-3 text-xs font-medium">
+                            <span class="bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+                                উত্তর প্রদান: <strong class="text-sky-400" x-text="getAnsweredCount()"></strong>/<span x-text="currentQuiz.questions.length"></span>
+                            </span>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button @click="showSubmitConfirm = true" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-lg transition shadow flex items-center gap-1.5">
+                            <i class="fa-solid fa-paper-plane"></i> পরীক্ষা শেষ করুন
+                        </button>
+                    </div>
+
+                    <!-- Questions Grid (2 Columns on Desktop) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                        <template x-for="(q, qIndex) in currentQuiz.questions" :key="q.id">
+                            <div class="bg-slate-50/80 rounded-xl p-4 sm:p-5 border border-slate-200 hover:border-sky-300 transition relative flex flex-col justify-between">
+                                <div>
+                                    <!-- Question Text -->
+                                    <div class="flex items-start gap-2 mb-3">
+                                        <span class="bg-slate-900 text-white text-xs font-bold w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5" x-text="qIndex + 1"></span>
+                                        <h3 class="font-bold text-slate-900 text-base leading-snug" x-text="q.question"></h3>
+                                    </div>
+
+                                    <!-- Options (ক, খ, গ, ঘ) OMR Style -->
+                                    <div class="space-y-2 mt-3">
+                                        <template x-for="(opt, optIndex) in q.options" :key="optIndex">
+                                            <div class="relative">
+                                                <input type="radio" 
+                                                       :name="'q_' + q.id" 
+                                                       :id="'q_' + q.id + '_opt_' + optIndex" 
+                                                       :value="optIndex"
+                                                       x-model="userAnswers[q.id]"
+                                                       class="sr-only omr-radio">
+                                                <label :for="'q_' + q.id + '_opt_' + optIndex" 
+                                                       class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100/80 cursor-pointer text-sm font-medium transition">
+                                                    <span class="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center text-xs font-bold shrink-0 bg-slate-50"
+                                                          x-text="getOptionPrefix(optIndex)"></span>
+                                                    <span class="text-slate-800 leading-snug" x-text="cleanOptionText(opt)"></span>
+                                                </label>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Bottom Submit Trigger -->
+                    <div class="mt-8 text-center border-t border-slate-200 pt-6">
+                        <button @click="showSubmitConfirm = true" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-8 py-3 rounded-xl text-base transition shadow-lg inline-flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-emerald-400"></i> পরীক্ষা সম্পন্ন করুন ও উত্তর জমা দিন
+                        </button>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+
+        <!-- 5. RESULT & EVALUATION DASHBOARD -->
+        <div x-show="activeTab === 'results'" x-transition class="max-w-4xl mx-auto space-y-6">
+            <template x-if="examResult">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-xl p-6 sm:p-8">
+                    
+                    <!-- Result Badge Banner -->
+                    <div class="text-center space-y-3 pb-6 border-b border-slate-100">
+                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 text-3xl font-bold mb-2 shadow-inner">
+                            <i class="fa-solid fa-award"></i>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">পরীক্ষার ফলাফল রিপোর্ট</h2>
+                        <p class="text-sm text-slate-500" x-text="currentQuiz ? currentQuiz.title : ''"></p>
+                        
+                        <div class="inline-block bg-sky-50 text-sky-700 font-bold px-4 py-1.5 rounded-full text-xs border border-sky-200" x-text="examResult.badge"></div>
+                    </div>
+
+                    <!-- Score Cards Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 py-6">
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+                            <div class="text-xs text-slate-500 font-semibold">প্রাপ্ত নম্বর</div>
+                            <div class="text-2xl font-extrabold text-slate-900 mt-1" x-text="examResult.score + ' / ' + examResult.total"></div>
+                            <div class="text-[10px] text-slate-400 mt-0.5">নেগেটিভ মার্ক সহ</div>
+                        </div>
+                        <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 text-center">
+                            <div class="text-xs text-emerald-700 font-semibold">সঠিক উত্তর</div>
+                            <div class="text-2xl font-extrabold text-emerald-600 mt-1" x-text="examResult.correctCount"></div>
+                            <div class="text-[10px] text-emerald-600 mt-0.5" x-text="'+' + examResult.correctCount + ' মার্ক'"></div>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-xl border border-red-200 text-center">
+                            <div class="text-xs text-red-700 font-semibold">ভুল উত্তর</div>
+                            <div class="text-2xl font-extrabold text-red-600 mt-1" x-text="examResult.wrongCount"></div>
+                            <div class="text-[10px] text-red-600 mt-0.5" x-text="'-' + (examResult.wrongCount * 0.25).toFixed(2) + ' মার্ক'"></div>
+                        </div>
+                        <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 text-center">
+                            <div class="text-xs text-amber-700 font-semibold">উত্তর দেওয়া হয়নি</div>
+                            <div class="text-2xl font-extrabold text-amber-600 mt-1" x-text="examResult.skippedCount"></div>
+                            <div class="text-[10px] text-amber-600 mt-0.5">০ মার্ক</div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex flex-wrap items-center justify-center gap-3 pt-2 pb-6 border-b border-slate-100">
+                        <button @click="showReviewModal = true" class="bg-sky-600 hover:bg-sky-500 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition shadow flex items-center gap-2">
+                            <i class="fa-solid fa-list-check"></i> সমাধান ও প্রতিটি প্রশ্নের ব্যাখ্যা দেখুন
+                        </button>
+                        <button @click="startExam(currentQuiz)" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition flex items-center gap-2">
+                            <i class="fa-solid fa-rotate-right"></i> পুনরায় পরীক্ষা দিন
+                        </button>
+                        <button @click="activeTab = 'quizzes'" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-sm transition">
+                            কুইজ ব্যাংকে ফিরে যান
+                        </button>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+
+        <!-- 6. DETAILED REVIEW MODAL (SOLUTION & EXPLANATIONS) -->
+        <div x-show="showReviewModal" x-transition class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+            <template x-if="currentQuiz">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+                    
+                    <!-- Modal Header -->
+                    <div class="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-lg flex items-center gap-2">
+                                <i class="fa-solid fa-file-invoice text-sky-400"></i> সম্পূর্ণ সমাধান ও ব্যাখ্যা
+                            </h3>
+                            <p class="text-xs text-slate-400">সঠিক, ভুল ও বাদ দেওয়া প্রশ্ন সমূহের পর্যালোচনা</p>
+                        </div>
+                        <button @click="showReviewModal = false" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+
+                    <!-- Review Content Scrollable -->
+                    <div class="p-4 sm:p-6 overflow-y-auto space-y-6 flex-grow">
+                        <template x-for="(q, qIndex) in (currentQuiz?.questions || [])" :key="q.id">
+                            <div class="p-4 sm:p-5 rounded-xl border transition space-y-3"
+                                 :class="userAnswers[q.id] === undefined ? 'bg-amber-50/40 border-amber-200' : (userAnswers[q.id] === q.correctAnswer ? 'bg-emerald-50/40 border-emerald-200' : 'bg-red-50/40 border-red-200')">
+                                
+                                <!-- Question Title & Status Badge -->
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-start gap-2">
+                                        <span class="bg-slate-800 text-white text-xs font-bold w-6 h-6 rounded flex items-center justify-center shrink-0 mt-0.5" x-text="qIndex + 1"></span>
+                                        <h4 class="font-bold text-slate-900 text-sm sm:text-base leading-snug" x-text="q.question"></h4>
+                                    </div>
+                                    <span class="text-xs font-bold px-2.5 py-1 rounded-md shrink-0"
+                                          :class="userAnswers[q.id] === undefined ? 'bg-amber-100 text-amber-800' : (userAnswers[q.id] === q.correctAnswer ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800')">
+                                        <span x-text="userAnswers[q.id] === undefined ? 'উত্তরিত নয়' : (userAnswers[q.id] === q.correctAnswer ? 'সঠিক (+১)' : 'ভুল (-০.২৫)')"></span>
+                                    </span>
+                                </div>
+
+                                <!-- Options Breakdown -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                                    <template x-for="(opt, optIndex) in q.options" :key="optIndex">
+                                        <div class="p-2.5 rounded-lg border text-xs font-medium flex items-center gap-2"
+                                             :class="optIndex === q.correctAnswer ? 'bg-emerald-500 text-white border-emerald-600 font-bold shadow-sm' : (userAnswers[q.id] === optIndex ? 'bg-red-500 text-white border-red-600 font-bold' : 'bg-white border-slate-200 text-slate-700')">
+                                            <span class="w-5 h-5 rounded-full border flex items-center justify-center text-[10px]"
+                                                  :class="optIndex === q.correctAnswer || userAnswers[q.id] === optIndex ? 'border-white bg-white/20' : 'border-slate-300 bg-slate-100 text-slate-600'"
+                                                  x-text="getOptionPrefix(optIndex)"></span>
+                                            <span x-text="cleanOptionText(opt)"></span>
+                                            <template x-if="optIndex === q.correctAnswer">
+                                                <i class="fa-solid fa-circle-check ml-auto text-sm"></i>
+                                            </template>
+                                            <template x-if="userAnswers[q.id] === optIndex && optIndex !== q.correctAnswer">
+                                                <i class="fa-solid fa-circle-xmark ml-auto text-sm"></i>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Explanation Box -->
+                                <div x-show="q.explanation" class="bg-white/80 p-3 rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1">
+                                    <span class="font-bold text-sky-700 flex items-center gap-1">
+                                        <i class="fa-solid fa-lightbulb text-amber-500"></i> সঠিক উত্তর ও ব্যাখ্যা:
+                                    </span>
+                                    <p class="leading-relaxed text-slate-600 pl-4 border-l-2 border-sky-400" x-text="q.explanation"></p>
+                                </div>
+
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="bg-slate-50 border-t border-slate-200 p-4 flex justify-end">
+                        <button @click="showReviewModal = false" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 py-2 rounded-xl text-xs transition">
+                            বন্ধ করুন
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- 7. SUBMIT EXAM CONFIRMATION MODAL -->
+        <div x-show="showSubmitConfirm" x-transition class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <template x-if="currentQuiz">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 text-center space-y-4">
+                    <div class="w-16 h-16 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center text-2xl">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900">আপনি কি পরীক্ষা শেষ করতে চান?</h3>
+                    <p class="text-xs text-slate-500">
+                        আপনি মোট <strong class="text-sky-600" x-text="currentQuiz ? currentQuiz.questions.length : 0"></strong>টি প্রশ্নের মধ্যে 
+                        <strong class="text-emerald-600" x-text="getAnsweredCount()"></strong>টির উত্তর দিয়েছেন।
+                    </p>
+                    <div class="flex items-center justify-center gap-3 pt-2">
+                        <button @click="showSubmitConfirm = false" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-xl text-xs transition">
+                            ফিরে যান
+                        </button>
+                        <button @click="finishExam()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition shadow">
+                            হ্যাঁ, জমা দিন
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="no-print bg-slate-900 text-slate-400 border-t border-slate-800 py-6 text-center text-xs">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>Admission Exam Studio • Powered by Gemini Vision AI</p>
+            <p class="mt-1 text-slate-500">বিশ্ববিদ্যালয় ভর্তি পরীক্ষার প্রস্তুতি সহজ করার একমাত্র ডিজিটাল প্ল্যাটফর্ম</p>
+        </div>
+    </footer>
+
+    <!-- Alpine App Script Logic -->
+    <script>
+        function admissionApp() {
+            return {
+                activeTab: 'quizzes', // 'quizzes', 'generator', 'settings', 'exam', 'results'
+                soundEnabled: true,
+                apiKey: '',
+                savedQuizzes: [],
+                currentQuiz: null,
+                userAnswers: {},
+                timeLeft: 0,
+                timerInterval: null,
+                examResult: null,
+                showSubmitConfirm: false,
+                showReviewModal: false,
+
+                // Image Generator state
+                imagePreview: null,
+                imageBase64: null,
+                imageMimeType: 'image/jpeg',
+                isGenerating: false,
+                genConfig: {
+                    subject: 'বাংলা ১ম পত্র',
+                    chapter: 'পারিভাষিক শব্দ ও গদ্য',
+                    questionCount: '10',
+                    timeLimit: '10',
+                    hasNegativeMarking: true
+                },
+
+                // Toast Notification
+                toast: {
+                    show: false,
+                    message: '',
+                    type: 'info'
+                },
+
+                initApp() {
+                    // Load API Key
+                    this.apiKey = localStorage.getItem('admission_gemini_api_key') || '';
+                    
+                    // Load Saved Quizzes or init default
+                    const stored = localStorage.getItem('admission_saved_quizzes');
+                    if (stored) {
+                        try {
+                            this.savedQuizzes = JSON.parse(stored);
+                        } catch (e) {
+                            this.loadDefaultQuizzes();
+                        }
+                    } else {
+                        this.loadDefaultQuizzes();
+                    }
+                },
+
+                showToast(msg, type = 'info') {
+                    this.toast.message = msg;
+                    this.toast.type = type;
+                    this.toast.show = true;
+                    setTimeout(() => {
+                        this.toast.show = false;
+                    }, 4000);
+                },
+
+                saveApiKey() {
+                    localStorage.setItem('admission_gemini_api_key', this.apiKey.trim());
+                    this.showToast('Gemini API Key সফলভাবে সংরক্ষিত হয়েছে!', 'success');
+                },
+
+                loadDefaultQuizzes() {
+                    // High-yield 20 Admission Bangla MCQs (Pre-loaded)
+                    const defaultQuiz = {
+                        id: 'preload_bangla_01',
+                        title: 'পারিভাষিক শব্দ ও বিশ্ববিদ্যালয় ভর্তি প্রশ্নব্যাংক (A-Z)',
+                        subject: 'বাংলা ১ম ও ২য় পত্র',
+                        chapter: 'পারিভাষিক শব্দ, ব্যাকরণ ও সাহিত্য',
+                        timeLimit: 15,
+                        hasNegativeMarking: true,
+                        isPreloaded: true,
+                        createdAt: new Date().toISOString(),
+                        questions: [
+                            {
+                                id: 1,
+                                question: "'Aborigines' শব্দের সঠিক বাংলা পারিভাষিক রূপ কোনটি?",
+                                options: ["ক) আদিবাসী", "খ) অভিবাসী", "গ) স্থানীয়", "ঘ) পৈতৃক"],
+                                correctAnswer: 0,
+                                explanation: "Aborigines শব্দটির বাংলা পারিভাষিক অর্থ হলো 'আদিবাসী'।"
+                            },
+                            {
+                                id: 2,
+                                question: "'Ad-hoc' শব্দের বাংলা পরিভাষা কোনটি?",
+                                options: ["ক) স্থায়ী", "খ) অনানুষ্ঠানিক", "গ) তদারককারী", "ঘ) এডহক / তদর্থক"],
+                                correctAnswer: 3,
+                                explanation: "Ad-hoc শব্দটির সঠিক বাংলা পরিভাষা হলো 'তদর্থক' বা বিশেষ উদ্দেশ্যে গঠিত।"
+                            },
+                            {
+                                id: 3,
+                                question: "'Bull market' বলতে কি বোঝায়?",
+                                options: ["ক) মন্দা বাজার", "খ) চাঙ্গা বাজার / উর্ধমুখী বাজার", "গ) পশুর বাজার", "ঘ) খোলা বাজার"],
+                                correctAnswer: 1,
+                                explanation: "শেয়ার বাজারে শেয়ারের দাম যখন ক্রমাগত বাড়তে থাকে তাকে Bull Market বা চাঙ্গা বাজার বলে।"
+                            },
+                            {
+                                id: 4,
+                                question: "'Bail' শব্দের পরিভাষা কোনটি?",
+                                options: ["ক) জামিন", "খ) মুক্তি", "গ) জরিমানা", "ঘ) শাস্তি"],
+                                correctAnswer: 0,
+                                explanation: "Bail শব্দটির আইনি পারিভাষিক অর্থ হলো 'জামিন'।"
+                            },
+                            {
+                                id: 5,
+                                question: "'Embargo' শব্দের সঠিক বাংলা অর্থ কোনটি?",
+                                options: ["ক) উন্মুক্ত বাণিজ্য", "খ) বাণিজ্য অবরোধ", "গ) আমদানি শুল্ক", "ঘ) চুক্তিপত্র"],
+                                correctAnswer: 1,
+                                explanation: "Embargo অর্থ হলো কোনো দেশের সাথে সরকারিভাবে বাণিজ্য বা লেনদেন নিসিদ্ধ করা বা বাণিজ্য অবরোধ।"
+                            },
+                            {
+                                id: 6,
+                                question: "'Honorary' শব্দের বাংলা পারিভাষিক রূপ কি?",
+                                options: ["ক) সম্মানজনক", "খ) বেতনভুক্ত", "গ) অবৈতনিক", "ঘ) সম্মানিত"],
+                                correctAnswer: 2,
+                                explanation: "Honorary মানে হলো কোনো প্রকার বেতন গ্রহণ না করে কাজ করা অর্থাৎ 'অবৈতনিক'।"
+                            },
+                            {
+                                id: 7,
+                                question: "'Manifesto' শব্দের বাংলা পরিভাষা কি?",
+                                options: ["ক) চুক্তিপত্র", "খ) ইশতেহার", "গ) নির্দেশনামা", "ঘ) বিবরণী"],
+                                correctAnswer: 1,
+                                explanation: "Manifesto শব্দটির বাংলা হলো 'ইশতেহার' বা ঘোষণাপত্র।"
+                            },
+                            {
+                                id: 8,
+                                question: "'Nepotism' শব্দটির বাংলা অর্থ কি?",
+                                options: ["ক) স্বজনপ্রীতি", "খ) বর্ণবাদ", "গ) একনায়কত্ব", "ঘ) মানবতাবাদ"],
+                                correctAnswer: 0,
+                                explanation: "Nepotism বলতে ক্ষমতার অপব্যবহার করে নিজের আত্মীয়দের সুযোগ দেওয়া বা 'স্বজনপ্রীতি' বোঝায়।"
+                            },
+                            {
+                                id: 9,
+                                question: "'Pragmatic' শব্দের সঠিক বাংলা কোনটি?",
+                                options: ["ক) তাত্ত্বিক", "খ) বাস্তবধর্মী / প্রয়োগসিদ্ধ", "গ) কাল্পনিক", "ঘ) আদর্শিক"],
+                                correctAnswer: 1,
+                                explanation: "Pragmatic অর্থ বাস্তবমুখী বা প্রয়োগসিদ্ধ।"
+                            },
+                            {
+                                id: 10,
+                                question: "'Quorum' শব্দের বাংলা পারিভাষিক রূপ কোনটি?",
+                                options: ["ক) সর্বসম্মত", "খ) সভার ন্যূনতম উপস্থিতি (কোরাম)", "গ) সিদ্ধান্ত", "ঘ) ভোটদান"],
+                                correctAnswer: 1,
+                                explanation: "Quorum মানে হলো কোনো সভা পরিচালনার জন্য ন্যূনতম সদস্যের প্রয়োজনীয় উপস্থিতি।"
+                            }
+                        ]
+                    };
+                    this.savedQuizzes = [defaultQuiz];
+                    this.saveQuizzesToStorage();
+                },
+
+                saveQuizzesToStorage() {
+                    localStorage.setItem('admission_saved_quizzes', JSON.stringify(this.savedQuizzes));
+                },
+
+                formatDate(isoStr) {
+                    if (!isoStr) return '';
+                    const d = new Date(isoStr);
+                    return d.toLocaleDateString('bn-BD', { month: 'short', day: 'numeric', year: 'numeric' });
+                },
+
+                // Image Selection Handlers
+                handleImageSelect(event) {
+                    const file = event.target.files[0];
+                    if (file) this.processImageFile(file);
+                },
+
+                handleImageDrop(event) {
+                    const file = event.dataTransfer.files[0];
+                    if (file) this.processImageFile(file);
+                },
+
+                processImageFile(file) {
+                    if (!file.type.startsWith('image/')) {
+                        this.showToast('দয়া করে ছবি ফাইল (JPG, PNG) সিলেক্ট করুন', 'error');
+                        return;
+                    }
+                    if (file.size > 10 * 1024 * 1024) {
+                        this.showToast('ছবি সাইজ ১০ মেগাবাইটের কম হতে হবে', 'error');
+                        return;
+                    }
+
+                    this.imageMimeType = file.type;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.imagePreview = e.target.result;
+                        // Extract raw base64 string
+                        this.imageBase64 = e.target.result.split(',')[1];
+                    };
+                    reader.readAsDataURL(file);
+                },
+
+                clearImage() {
+                    this.imagePreview = null;
+                    this.imageBase64 = null;
+                    document.getElementById('imageInput').value = '';
+                },
+
+                // AI Quiz Generation Call (Gemini API with retry)
+                async generateQuizFromImage() {
+                    if (!this.imageBase64) {
+                        this.showToast('অনুগ্রহ করে একটি ছবি নির্বাচন করুন', 'error');
+                        return;
+                    }
+
+                    this.isGenerating = true;
+
+                    // System instruction for Gemini model
+                    const promptText = `Act as an expert university admission test question paper setter in Bangladesh (Dhaka University / Rajshahi University / GST standard).
+Read the provided image (textbook, lecture notes, or question paper) and generate exactly ${this.genConfig.questionCount} multiple-choice questions (MCQs) in Bengali (Bangla script).
+
+Target Subject: ${this.genConfig.subject || 'General'}
+Chapter/Topic: ${this.genConfig.chapter || 'General'}
+
+Requirements for output JSON:
+1. "title": A descriptive title in Bangla.
+2. "questions": Array of question objects. Each question object MUST have:
+   - "id": integer starting from 1
+   - "question": Bengali text of the MCQ question
+   - "options": Array of 4 strings in Bengali (e.g. ["ক) ...", "খ) ...", "গ) ...", "ঘ) ..."])
+   - "correctAnswer": Index of the correct option (0 for first option, 1 for second, 2 for third, 3 for fourth)
+   - "explanation": Brief, clear Bengali explanation of why this answer is correct.
+
+Return ONLY valid JSON matching this structure without markdown fences or extra commentary.`;
+
+                    const apiKeyToUse = this.apiKey.trim();
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKeyToUse}`;
+
+                    const payload = {
+                        contents: [
+                            {
+                                role: "user",
+                                parts: [
+                                    { text: promptText },
+                                    {
+                                        inlineData: {
+                                            mimeType: this.imageMimeType,
+                                            data: this.imageBase64
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        generationConfig: {
+                            responseMimeType: "application/json"
+                        }
+                    };
+
+                    let success = false;
+                    let retries = 0;
+                    const maxRetries = 3;
+
+                    while (!success && retries < maxRetries) {
+                        try {
+                            const res = await fetch(apiUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+
+                            if (!res.ok) {
+                                throw new Error(`API Error: ${res.status}`);
+                            }
+
+                            const result = await res.json();
+                            const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                            if (jsonText) {
+                                const parsedData = JSON.parse(jsonText);
+                                
+                                const newQuiz = {
+                                    id: 'quiz_' + Date.now(),
+                                    title: parsedData.title || `${this.genConfig.subject} - মডেল টেস্ট`,
+                                    subject: this.genConfig.subject,
+                                    chapter: this.genConfig.chapter,
+                                    timeLimit: parseInt(this.genConfig.timeLimit),
+                                    hasNegativeMarking: this.genConfig.hasNegativeMarking,
+                                    createdAt: new Date().toISOString(),
+                                    questions: parsedData.questions || []
+                                };
+
+                                this.savedQuizzes.unshift(newQuiz);
+                                this.saveQuizzesToStorage();
+                                this.isGenerating = false;
+                                this.clearImage();
+                                this.showToast('সফলভাবে AI দিয়ে কুইজ তৈরি হয়েছে!', 'success');
+                                this.startExam(newQuiz);
+                                success = true;
+                                break;
+                            }
+                        } catch (err) {
+                            console.error('Retry attempt failed:', retries, err);
+                            retries++;
+                            if (retries < maxRetries) {
+                                await new Promise(r => setTimeout(r, Math.pow(2, retries) * 1000));
+                            } else {
+                                this.isGenerating = false;
+                                this.showToast('কুইজ জেনারেট করা সম্ভব হয়নি। এপিআই কী চেক করুন অথবা অন্য পরিষ্কার ছবি আপলোড করুন।', 'error');
+                            }
+                        }
+                    }
+                },
+
+                // Exam Engine Functions
+                startExam(quiz) {
+                    this.currentQuiz = quiz;
+                    this.userAnswers = {};
+                    this.timeLeft = quiz.timeLimit * 60;
+                    this.activeTab = 'exam';
+                    this.showSubmitConfirm = false;
+
+                    if (this.timerInterval) clearInterval(this.timerInterval);
+
+                    this.timerInterval = setInterval(() => {
+                        if (this.timeLeft > 0) {
+                            this.timeLeft--;
+                        } else {
+                            clearInterval(this.timerInterval);
+                            this.finishExam();
+                        }
+                    }, 1000);
+                },
+
+                formatTimer(seconds) {
+                    const mins = Math.floor(seconds / 60);
+                    const secs = seconds % 60;
+                    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                },
+
+                getOptionPrefix(index) {
+                    const prefixes = ['ক', 'খ', 'গ', 'ঘ'];
+                    return prefixes[index] || '';
+                },
+
+                cleanOptionText(text) {
+                    if (!text) return '';
+                    // Strip prefix like ক), খ. if present
+                    return text.replace(/^[ক-ঘa-dA-D][\)\.\-]\s*/, '');
+                },
+
+                getAnsweredCount() {
+                    return Object.keys(this.userAnswers).length;
+                },
+
+                finishExam() {
+                    if (!this.currentQuiz) return;
+                    if (this.timerInterval) clearInterval(this.timerInterval);
+                    this.showSubmitConfirm = false;
+
+                    let correctCount = 0;
+                    let wrongCount = 0;
+                    let skippedCount = 0;
+
+                    this.currentQuiz.questions.forEach(q => {
+                        const userPick = this.userAnswers[q.id];
+                        if (userPick === undefined) {
+                            skippedCount++;
+                        } else if (userPick === q.correctAnswer) {
+                            correctCount++;
+                        } else {
+                            wrongCount++;
+                        }
+                    });
+
+                    const penalty = this.currentQuiz.hasNegativeMarking ? (wrongCount * 0.25) : 0;
+                    const finalScore = Math.max(0, correctCount - penalty);
+                    const total = this.currentQuiz.questions.length;
+                    const percentage = (finalScore / total) * 100;
+
+                    let badge = "অনুশীলন প্রয়োজন";
+                    if (percentage >= 80) {
+                        badge = "🏆 মেধা তালিকা - ১ম ১% (DU Recommended)";
+                    } else if (percentage >= 65) {
+                        badge = "🌟 চমৎকার প্রস্তুতি (১ম শ্রেণী)";
+                    } else if (percentage >= 50) {
+                        badge = "👍 ভালো উত্তীর্ণ";
+                    }
+
+                    this.examResult = {
+                        score: finalScore.toFixed(2),
+                        total: total,
+                        correctCount: correctCount,
+                        wrongCount: wrongCount,
+                        skippedCount: skippedCount,
+                        badge: badge
+                    };
+
+                    // Update last score in stored quiz
+                    const quizIdx = this.savedQuizzes.findIndex(q => q.id === this.currentQuiz.id);
+                    if (quizIdx !== -1) {
+                        this.savedQuizzes[quizIdx].lastScore = finalScore.toFixed(1);
+                        this.saveQuizzesToStorage();
+                    }
+
+                    this.activeTab = 'results';
+                },
+
+                deleteQuiz(id) {
+                    this.savedQuizzes = this.savedQuizzes.filter(q => q.id !== id);
+                    this.saveQuizzesToStorage();
+                    this.showToast('কুইজ মুছে ফেলা হয়েছে', 'info');
+                },
+
+                exportQuizJSON(quiz) {
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(quiz, null, 2));
+                    const downloadAnchor = document.createElement('a');
+                    downloadAnchor.setAttribute("href", dataStr);
+                    downloadAnchor.setAttribute("download", `${quiz.title || 'quiz'}.json`);
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    downloadAnchor.remove();
+                },
+
+                triggerJSONImport() {
+                    document.getElementById('jsonInput').click();
+                },
+
+                importQuizJSON(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const imported = JSON.parse(e.target.result);
+                            if (imported && imported.questions && Array.isArray(imported.questions)) {
+                                imported.id = 'imported_' + Date.now();
+                                this.savedQuizzes.unshift(imported);
+                                this.saveQuizzesToStorage();
+                                this.showToast('কুইজ সফলভাবে ইমপোর্ট করা হয়েছে!', 'success');
+                            } else {
+                                this.showToast('ভুল JSON ফরম্যাট', 'error');
+                            }
+                        } catch (err) {
+                            this.showToast('JSON ফাইল পড়া সম্ভব হয়নি', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+        }
+    </script>
+</body>
+</html>
