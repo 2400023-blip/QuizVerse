@@ -965,123 +965,128 @@
 
                     const apiKey = this.getApiKey();
                     if (!apiKey) {
-                        this.showToast('API Key কনফিগারেশনে সমস্যা দেখা দিয়েছে!', 'error');
+                        this.showToast('API Key পাওয়া যায়নি! অনুগ্রহ করে নিজস্ব API Key দিন।', 'error');
+                        this.showApiKeyModal = true;
                         return;
                     }
 
                     this.isLoading = true;
                     this.loadingStatus = 'ছবি বিশদভাবে বিশ্লেষণ করা হচ্ছে...';
 
-                    try {
-                        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                    // Supported Gemini models with automatic fallback
+                    const modelsToTry = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+                    let lastError = null;
+                    let successData = null;
 
-                        // Strict Grounded Prompt Instructions (100% Image-based, No external/irrelevant titles)
-                        const promptText = `
+                    // Strict Grounded Prompt Instructions (100% Image-based, No external/irrelevant titles)
+                    const promptText = `
 তুমি একজন অত্যন্ত নিখুঁত ও অভিজ্ঞ ভর্তি পরীক্ষা প্রশ্ন প্রণেতা।
 তোমাকে প্রদত্ত ছবি বা ছবিগুলোর টেক্সট, ডায়াগ্রাম, ফর্মুলা ও তথ্য নিখুঁতভাবে পর্যালোচনা করে ঠিক ${this.questionCount} টি উচ্চমানের বহুনির্বাচনী প্রশ্ন (MCQ) তৈরি করতে হবে।
 
 কঠোর ও বাধ্যবাধক নিয়মাবলী (STRICT GROUNDING RULES):
-১. ১০০% ছবি-নির্ভর কন্টেন্ট: ইউজার যেকোনো বিষয়ের (যেমন: Physics, Chemistry, Higher Math, Biology, Bangla, English, General Knowledge, ICT, Accounting ইত্যাদি) ছবি আপলোড করতে পারে। প্রশ্ন ও অপশনগুলো শুধুমাত্র এবং শুধুমাত্র আপলোড করা ছবির ভেতরের পাঠ্য, কনসেপ্ট, তথ্য বা সূত্রের ওপর ভিত্তি করেই তৈরি করতে হবে। ছবির বাইরে থেকে কোনো সাধারণ প্রশ্ন বানানো সম্পূর্ণ নিষিদ্ধ।
-২. কোনো অপ্রাসঙ্গিক ট্যাগ/টাইটেল যুক্ত করা যাবে না: প্রশ্নের মূল বাক্যের শুরুতে বা ভেতরে 'বিশ্ববিদ্যালয় ভর্তি পরীক্ষা', 'প্রশ্ন ১:', 'ঢাবি ক ইউনিট', 'Physics Q1' বা এ জাতীয় কোনো টাইটেল/ট্যাগ বা ফালতু ফিলার শব্দ লিখবে না। প্রশ্ন সরাসরি বিষয়বস্তুর মূল প্রশ্নসূচক বাক্য দিয়ে শুরু হতে হবে।
-৩. অপশন: প্রতিটি প্রশ্নের জন্য ৪টি স্পষ্ট ও অর্থপূর্ণ অপশন (options array-তে ৪টি string) থাকবে। এর মধ্যে সঠিক ১টি উত্তর নির্ধারিত থাকবে।
+১. ১০০% ছবি-নির্ভর কন্টেন্ট: ইউজার যেকোনো বিষয়ের ছবি আপলোড করতে পারে। প্রশ্ন ও অপশনগুলো শুধুমাত্র এবং শুধুমাত্র আপলোড করা ছবির ভেতরের পাঠ্য, কনসেপ্ট, তথ্য বা সূত্রের ওপর ভিত্তি করেই তৈরি করতে হবে। ছবির বাইরে থেকে কোনো সাধারণ প্রশ্ন বানানো সম্পূর্ণ নিষিদ্ধ।
+২. কোনো অপ্রাসঙ্গিক ট্যাগ/টাইটেল যুক্ত করা যাবে না: প্রশ্নের মূল বাক্যের শুরুতে বা ভেতরে 'বিশ্ববিদ্যালয় ভর্তি পরীক্ষা', 'প্রশ্ন ১:' ইত্যাদি লিখবে না। প্রশ্ন সরাসরি বিষয়বস্তুর মূল প্রশ্নসূচক বাক্য দিয়ে শুরু হতে হবে।
+৩. অপশন: প্রতিটি প্রশ্নের জন্য ৪টি স্পষ্ট ও অর্থপূর্ণ অপশন (options array-তে ৪টি string) থাকবে।
 ৪. উত্তর নির্দেশক (answer): 0, 1, 2, 3 এর মাধ্যমে সঠিক অপশনের ইনডেক্স নির্দেশ করতে হবে।
-৫. বিস্তারিত বাংলা ব্যাখ্যা (explanation): প্রতিটি প্রশ্নের উত্তর কেন সঠিক, তার স্পষ্ট, নিখুঁত ও সহজবোধ্য ব্যাখ্যা ছবির ওপর ভিত্তি করে প্রদান করতে হবে।
+৫. বিস্তারিত বাংলা ব্যাখ্যা (explanation): প্রতিটি প্রশ্নের উত্তর কেন সঠিক, তার স্পষ্ট ও সহজবোধ্য ব্যাখ্যা ছবির ওপর ভিত্তি করে প্রদান করতে হবে।
 `;
 
-                        const parts = [{ text: promptText }];
+                    const parts = [{ text: promptText }];
 
-                        // Convert image base64 format for Gemini API payload
-                        this.uploadedImages.forEach(img => {
-                            const rawBase64 = img.base64.split(',')[1];
-                            parts.push({
-                                inline_data: {
-                                    mime_type: img.mimeType,
-                                    data: rawBase64
-                                }
-                            });
+                    // Convert image base64 format for Gemini API payload
+                    this.uploadedImages.forEach(img => {
+                        const rawBase64 = img.base64.split(',')[1];
+                        parts.push({
+                            inline_data: {
+                                mime_type: img.mimeType,
+                                data: rawBase64
+                            }
                         });
+                    });
 
-                        const payload = {
-                            contents: [{ role: 'user', parts: parts }],
-                            generationConfig: {
-                                responseMimeType: "application/json",
-                                responseSchema: {
-                                    type: "ARRAY",
-                                    items: {
-                                        type: "OBJECT",
-                                        properties: {
-                                            question: { type: "STRING" },
-                                            options: {
-                                                type: "ARRAY",
-                                                items: { type: "STRING" }
-                                            },
-                                            answer: { type: "INTEGER" },
-                                            explanation: { type: "STRING" }
+                    const payload = {
+                        contents: [{ role: 'user', parts: parts }],
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        question: { type: "STRING" },
+                                        options: {
+                                            type: "ARRAY",
+                                            items: { type: "STRING" }
                                         },
-                                        required: ["question", "options", "answer", "explanation"]
+                                        answer: { type: "INTEGER" },
+                                        explanation: { type: "STRING" }
+                                    },
+                                    required: ["question", "options", "answer", "explanation"]
+                                }
+                            }
+                        }
+                    };
+
+                    for (const model of modelsToTry) {
+                        try {
+                            this.loadingStatus = `AI (${model}) দিয়ে মডেল টেস্ট প্রস্তুত হচ্ছে...`;
+                            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+                            const response = await fetch(endpoint, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+
+                            if (!response.ok) {
+                                let errDetail = `Status ${response.status}`;
+                                try {
+                                    const errJson = await response.json();
+                                    if (errJson.error?.message) {
+                                        errDetail = errJson.error.message;
                                     }
-                                }
+                                } catch(e) {}
+                                throw new Error(errDetail);
                             }
-                        };
 
-                        this.loadingStatus = 'AI দিয়ে মডেল টেস্ট প্রস্তুত হচ্ছে...';
-
-                        const response = await fetch(endpoint, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!response.ok) {
-                            let errorMsg = `API প্রসেসিং ত্রুটি (${response.status})`;
-                            try {
-                                const errData = await response.json();
-                                if (errData.error?.message) {
-                                    errorMsg = errData.error.message;
-                                }
-                            } catch(e) {}
-                            if (response.status === 400 || response.status === 403 || response.status === 429) {
-                                errorMsg += ' - উপরে ডানের "API Key" আইকন থেকে আপনার নিজস্ব Google AI Studio API Key প্রদান করুন।';
+                            const data = await response.json();
+                            const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                            if (rawText) {
+                                successData = JSON.parse(rawText);
+                                break; // Successfully parsed questions
                             }
-                            throw new Error(errorMsg);
+                        } catch (err) {
+                            lastError = err;
+                            console.warn(`Model ${model} try failed:`, err);
                         }
-
-                        const data = await response.json();
-                        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                        if (!rawText) throw new Error("অবৈধ এআই রেসপন্স পাওয়া গেছে!");
-
-                        const generatedQuestions = JSON.parse(rawText);
-
-                        if (!Array.isArray(generatedQuestions) || generatedQuestions.length === 0) {
-                            throw new Error("প্রশ্ন তৈরি করতে ব্যর্থ হয়েছে। ছবিগুলো পুনরায় স্পষ্ট করে তুলুন।");
-                        }
-
-                        // Set Current Quiz
-                        this.questions = generatedQuestions;
-                        this.currentQuizTitle = this.customExamTitle.trim() || `কাস্টম মডেল টেস্ট (${this.questions.length} টি প্রশ্ন)`;
-                        
-                        // Save to LocalStorage Quiz Bank History
-                        const quizItem = {
-                            id: Date.now().toString(),
-                            title: this.currentQuizTitle,
-                            date: new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', year: 'numeric' }),
-                            questions: this.questions,
-                            secPerQuestion: this.secPerQuestion,
-                            lastScore: undefined
-                        };
-                        this.quizHistory.unshift(quizItem);
-                        this.saveQuizHistory();
-
-                        this.showToast('সফলভাবে কুইজ তৈরি হয়েছে!', 'success');
-                        this.startExam();
-
-                    } catch (err) {
-                        console.error(err);
-                        this.showToast(err.message || 'প্রশ্ন তৈরিতে সমস্যা দেখা দিয়েছে!', 'error');
-                    } finally {
-                        this.isLoading = false;
                     }
+
+                    if (!successData || !Array.isArray(successData) || successData.length === 0) {
+                        this.isLoading = false;
+                        this.showToast('API Key সমস্যার কারণে প্রশ্ন তৈরি করা যায়নি। নিজস্ব API Key প্রদান করুন।', 'error');
+                        this.showApiKeyModal = true;
+                        return;
+                    }
+
+                    // Set Current Quiz
+                    this.questions = successData;
+                    this.currentQuizTitle = this.customExamTitle.trim() || `কাস্টম মডেল টেস্ট (${this.questions.length} টি প্রশ্ন)`;
+                    
+                    // Save to LocalStorage Quiz Bank History
+                    const quizItem = {
+                        id: Date.now().toString(),
+                        title: this.currentQuizTitle,
+                        date: new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', year: 'numeric' }),
+                        questions: this.questions,
+                        secPerQuestion: this.secPerQuestion,
+                        lastScore: undefined
+                    };
+                    this.quizHistory.unshift(quizItem);
+                    this.saveQuizHistory();
+
+                    this.showToast('সফলভাবে কুইজ তৈরি হয়েছে!', 'success');
+                    this.isLoading = false;
+                    this.startExam();
                 },
 
                 // Exam Timer & Execution Logic
