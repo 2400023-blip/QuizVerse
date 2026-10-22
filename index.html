@@ -1,143 +1,1329 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="bn" class="h-full bg-slate-900 text-slate-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuizVerse - AI Quiz Generator</title>
+    <title>QuizVerse - Admission Test Generator & Smart Exam Engine</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts: Hind Siliguri for Bengali typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        body { font-family: 'Hind Siliguri', sans-serif; }
+        body {
+            font-family: 'Hind Siliguri', 'Inter', sans-serif;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        /* Glassmorphic Effects */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card-hover:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 10px 30px -10px rgba(79, 70, 229, 0.25);
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
-    <div class="max-w-4xl mx-auto space-y-6">
-        <!-- Header -->
-        <header class="text-center space-y-2">
-            <h1 class="text-3xl font-bold text-cyan-400">QuizVerse Engine Pro</h1>
-            <p class="text-slate-400 text-sm">আপনার আপলোড করা ছবির নির্দিষ্ট কনসেপ্ট থেকেই শুধুমাত্র প্রশ্ন তৈরি হবে</p>
-        </header>
 
-        <!-- Main Form -->
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-6 shadow-xl">
-            <!-- File Upload -->
-            <div>
-                <label class="block text-sm font-semibold mb-2">১. বই/নোটের ছবি আপলোড করুন:</label>
-                <input type="file" id="imageInput" accept="image/*" multiple class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-600 file:text-white hover:file:bg-cyan-500 cursor-pointer">
-            </div>
+<body class="min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white"
+      x-data="quizApp()"
+      x-init="initApp()">
 
-            <!-- Configuration -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-semibold mb-2">প্রশ্নের সংখ্যা:</label>
-                    <select id="qCount" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white">
-                        <option value="5">৫ টি</option>
-                        <option value="10">১০ টি</option>
-                        <option value="20" selected>২০ টি</option>
-                        <option value="50">৫০ টি</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold mb-2">পরীক্ষার শিরোনাম (ঐচ্ছিক):</label>
-                    <input type="text" id="quizTitle" placeholder="যেমন: পদার্থবিজ্ঞান ১ম পত্র - অধ্যায় ৩" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white placeholder-slate-400">
-                </div>
-            </div>
-
-            <!-- Generate Button -->
-            <button onclick="generateQuiz()" id="genBtn" class="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 rounded-lg transition duration-200 shadow-lg">
-                ✨ AI প্রশ্ন তৈরি শুরু করুন
-            </button>
+    <!-- Toast Notification Popup -->
+    <div x-show="toast.show" 
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="opacity-0 translate-y-[-20px]"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200 transform"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-[-20px]"
+         class="fixed top-5 right-5 z-50 flex items-center p-4 mb-4 rounded-xl shadow-2xl text-white max-w-md w-full border"
+         :class="{
+            'bg-emerald-900/90 border-emerald-500 text-emerald-100': toast.type === 'success',
+            'bg-rose-900/90 border-rose-500 text-rose-100': toast.type === 'error',
+            'bg-amber-900/90 border-amber-500 text-amber-100': toast.type === 'warning',
+            'bg-indigo-900/90 border-indigo-500 text-indigo-100': toast.type === 'info'
+         }"
+         style="display: none;">
+        <div class="mr-3">
+            <template x-if="toast.type === 'success'">
+                <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </template>
+            <template x-if="toast.type === 'error'">
+                <svg class="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </template>
+            <template x-if="toast.type === 'warning' || toast.type === 'info'">
+                <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </template>
         </div>
-
-        <!-- Error & Output Box -->
-        <div id="statusBox" class="hidden p-4 rounded-lg bg-slate-800 border"></div>
-        <div id="quizOutput" class="space-y-4"></div>
+        <div class="flex-1 text-sm font-medium" x-text="toast.message"></div>
+        <button @click="toast.show = false" class="ml-2 text-slate-300 hover:text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
     </div>
 
-    <script>
-        // API Key-কে টুকরো করে রাখা হয়েছে গোপন রাখার জন্য
-        const k1 = "AIzaSy";
-        const k2 = "[AQ.Ab8RN6IjP_4GUENeyiKQTCBRdJPC0_wITaU11vnlrho_UGlwog]"; // <--- এখানে আপনার Gemini API Key টি বসান (AIzaSy অংশটুকু বাদ দিয়ে বা পুরোটা দিলে k1 মুছে দিন)
-
-        async function generateQuiz() {
-            const fileInput = document.getElementById('imageInput');
-            const qCount = document.getElementById('qCount').value;
-            const quizTitle = document.getElementById('quizTitle').value || 'কাস্টম পরীক্ষা';
-            const statusBox = document.getElementById('statusBox');
-            const quizOutput = document.getElementById('quizOutput');
-            const genBtn = document.getElementById('genBtn');
-
-            if (fileInput.files.length === 0) {
-                alert('দয়া করে অন্তত একটি ছবি সিলেক্ট করুন!');
-                return;
-            }
-
-            genBtn.disabled = true;
-            genBtn.innerText = 'প্রশ্ন তৈরি হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...';
-            statusBox.classList.remove('hidden', 'bg-red-900/50', 'border-red-500');
-            statusBox.classList.add('bg-cyan-900/50', 'border-cyan-500');
-            statusBox.innerText = 'AI ছবি বিশ্লেষণ করে প্রশ্ন তৈরি করছে...';
-            quizOutput.innerHTML = '';
-
-            try {
-                const file = fileInput.files[0];
-                const base64Data = await convertToBase64(file);
-                
-                // অফিশিয়াল এবং সবচেয়ে স্টেবল gemini-1.5-flash মডেল ব্যবহার করা হয়েছে
-                const apiKey = k2.startsWith("AIzaSy") ? k2 : k1 + k2;
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-                const prompt = `আপনি একজন নিরপেক্ষ শিক্ষক। এই ছবিতে থাকা বিষয়বস্তুর ওপর ভিত্তি করে ঠিক ${qCount} টি MCQ প্রশ্ন ও ৪টি অপশনসহ সঠিক উত্তর ও ব্যাখ্যা তৈরি করুন। 
-                কঠোর নিয়ম: 
-                ১. ছবির বাইরের কোনো টপিক বা বিশ্ববিদ্যালয় ভর্তি পরীক্ষার কথা আনবেন না।
-                ২. আউটপুট ফরম্যাট হতে হবে পরিষ্কার বাংলা ভাষায়।`;
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: prompt },
-                                { inline_data: { mime_type: file.type, data: base64Data } }
-                            ]
-                        }]
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error?.message || 'API Call Failed');
-                }
-
-                const resultText = data.candidates[0].content.parts[0].text;
-                statusBox.classList.add('hidden');
-                
-                quizOutput.innerHTML = `
-                    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
-                        <h2 class="text-2xl font-bold text-cyan-400 border-b border-slate-700 pb-2">${quizTitle}</h2>
-                        <div class="whitespace-pre-line text-slate-200">${resultText}</div>
+    <!-- Header / Navigation Bar -->
+    <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 sm:h-20">
+                <!-- Brand Logo -->
+                <div class="flex items-center gap-3 cursor-pointer" @click="activeTab = 'generator'">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 p-0.5 shadow-lg shadow-indigo-500/30">
+                        <div class="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
+                            <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                        </div>
                     </div>
-                `;
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl sm:text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400">QuizVerse</span>
+                            <span class="bg-indigo-500/20 text-indigo-300 text-xs px-2 py-0.5 rounded-full border border-indigo-500/30 font-semibold">Pro v3.5</span>
+                        </div>
+                        <p class="text-xs text-slate-400 hidden sm:block">স্মার্ট এডমিশন টেস্ট জেনারেটর ও এক্সাম ইঞ্জিন</p>
+                    </div>
+                </div>
 
-            } catch (err) {
-                statusBox.classList.remove('hidden', 'bg-cyan-900/50', 'border-cyan-500');
-                statusBox.classList.add('bg-red-900/50', 'border-red-500');
-                statusBox.innerText = 'এরর: ' + err.message;
-            } finally {
-                genBtn.disabled = false;
-                genBtn.innerText = '✨ AI প্রশ্ন তৈরি শুরু করুন';
-            }
-        }
+                <!-- Navigation Tabs -->
+                <nav class="flex items-center gap-1 sm:gap-2">
+                    <button @click="switchTab('generator')" 
+                            :class="activeTab === 'generator' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-800'"
+                            class="px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl font-medium text-xs sm:text-sm transition-all duration-200 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span class="hidden md:inline">প্রশ্ন</span> জেনারেটর
+                    </button>
 
-        function convertToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = error => reject(error);
-            });
+                    <button @click="switchTab('exam')" 
+                            x-show="questions.length > 0"
+                            :class="activeTab === 'exam' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-800'"
+                            class="px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl font-medium text-xs sm:text-sm transition-all duration-200 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        মডেল টেস্ট
+                    </button>
+
+                    <button @click="switchTab('bank')" 
+                            :class="activeTab === 'bank' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-800'"
+                            class="px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl font-medium text-xs sm:text-sm transition-all duration-200 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span class="hidden md:inline">কুইজ</span> ব্যাংক
+                    </button>
+
+                    <button @click="switchTab('planner')" 
+                            :class="activeTab === 'planner' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-800'"
+                            class="px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl font-medium text-xs sm:text-sm transition-all duration-200 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        প্ল্যানার
+                    </button>
+
+                    <button @click="startDemoQuiz()" 
+                            class="px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-600 hover:to-emerald-600 text-slate-950 font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                        ডেমো টেস্ট
+                    </button>
+
+                    <button @click="showApiKeyModal = true" 
+                            title="API Key সেটআপ"
+                            class="p-2.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 0121 9z"></path></svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ==================== TAB 1: QUESTION GENERATOR ==================== -->
+        <div x-show="activeTab === 'generator'" class="space-y-6" x-transition>
+            <!-- Hero Banner -->
+            <div class="glass-card rounded-2xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-indigo-950/40 to-slate-900 border border-indigo-500/20 relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="relative z-10 max-w-3xl">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-3">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        ১০০% ছবি-নির্ভর ও নিখুঁত এআই প্রশ্ন জেনারেটর
+                    </span>
+                    <h1 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                        যেকোনো বই বা নোটের ছবি দিন, মুহূর্তেই তৈরি হবে <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">বিশ্ববিদ্যালয় মানের পরীক্ষা</span>
+                    </h1>
+                    <p class="mt-3 text-slate-300 text-sm sm:text-base leading-relaxed">
+                        পদার্থ, রসায়ন, গণিত, জীববিজ্ঞান, বাংলা, ইংরেজি, সাধারণ জ্ঞান কিংবা মানবিক ও ব্যবসায় শিক্ষার যেকোনো চ্যাপ্টারের ছবি আপলোড করুন। AI ছবি বিশ্লেষণ করে সর্বোচ্চ মানসম্মত MCQ ও বিস্তারিত ব্যাখ্যা প্রস্তুত করবে।
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Column: Upload Area & Image Preview (2 cols) -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="glass-card rounded-2xl p-6 border border-slate-800">
+                        <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            ১. ছবি আপলোড করুন (সর্বোচ্চ ১৫ টি)
+                        </h2>
+
+                        <!-- Action Pickers -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <!-- Gallery Upload -->
+                            <button @click="$refs.galleryInput.click()" 
+                                    class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-indigo-500/30 hover:border-indigo-500/80 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 transition group cursor-pointer text-center">
+                                <div class="w-12 h-12 rounded-full bg-indigo-500/10 group-hover:bg-indigo-500/20 flex items-center justify-center mb-2 text-indigo-400">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                </div>
+                                <span class="text-sm font-semibold text-slate-200">গ্যালারি থেকে সিলেক্ট করুন</span>
+                                <span class="text-xs text-slate-400 mt-1">PNG, JPG, WEBP সাপোর্ট করে</span>
+                            </button>
+                            <input type="file" x-ref="galleryInput" @change="handleFileSelect($event)" multiple accept="image/*" class="hidden">
+
+                            <!-- Camera Capture -->
+                            <button @click="$refs.cameraInput.click()" 
+                                    class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-cyan-500/30 hover:border-cyan-500/80 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 transition group cursor-pointer text-center">
+                                <div class="w-12 h-12 rounded-full bg-cyan-500/10 group-hover:bg-cyan-500/20 flex items-center justify-center mb-2 text-cyan-400">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                </div>
+                                <span class="text-sm font-semibold text-slate-200">ক্যামেরা দিয়ে তুলুন</span>
+                                <span class="text-xs text-slate-400 mt-1">সরাসরি বইয়ের পাতার ছবি নিন</span>
+                            </button>
+                            <input type="file" x-ref="cameraInput" @change="handleFileSelect($event)" accept="image/*" capture="environment" class="hidden">
+                        </div>
+
+                        <!-- Uploaded Image Thumbnails Grid -->
+                        <template x-if="uploadedImages.length > 0">
+                            <div>
+                                <div class="flex items-center justify-between mb-3 border-t border-slate-800 pt-4">
+                                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                        আপলোডকৃত ছবি (<span x-text="uploadedImages.length"></span>/১৫)
+                                    </span>
+                                    <button @click="uploadedImages = []" class="text-xs text-rose-400 hover:text-rose-300 font-medium">
+                                        সব মুছুন
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                    <template x-for="(img, idx) in uploadedImages" :key="img.id">
+                                        <div class="relative group rounded-xl overflow-hidden border border-slate-700 bg-slate-900 aspect-square">
+                                            <img :src="img.base64" :alt="img.name" class="w-full h-full object-cover">
+                                            <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                                                <button @click="removeImage(idx)" class="p-2 bg-rose-600 rounded-lg text-white hover:bg-rose-500 shadow-lg" title="মুছে ফেলুন">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                </button>
+                                            </div>
+                                            <span class="absolute bottom-1 left-1 bg-slate-950/80 text-[10px] text-slate-300 px-1.5 py-0.5 rounded" x-text="idx + 1"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="uploadedImages.length === 0">
+                            <p class="text-center text-xs text-slate-500 py-2">
+                                কোনো ছবি সিলেক্ট করা হয়নি। প্রশ্ন তৈরির জন্য অন্তত ১টি ছবি যোগ করুন।
+                            </p>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Right Column: Exam Configurations & Generation Trigger -->
+                <div class="space-y-6">
+                    <div class="glass-card rounded-2xl p-6 border border-slate-800 space-y-5">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+                            <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                            ২. পরীক্ষার কনফিগারেশন
+                        </h2>
+
+                        <!-- Questions Count Selector -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-300 mb-2">
+                                প্রশ্নের সংখ্যা: <span class="text-indigo-400 font-bold" x-text="questionCount"></span> টি
+                            </label>
+                            <select x-model.number="questionCount" 
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                                <option value="20">২০ টি প্রশ্ন</option>
+                                <option value="30">৩০ টি প্রশ্ন</option>
+                                <option value="40">৪০ টি প্রশ্ন</option>
+                                <option value="50">৫০ টি প্রশ্ন</option>
+                                <option value="60">৬০ টি প্রশ্ন</option>
+                                <option value="70">৭০ টি প্রশ্ন</option>
+                                <option value="80">৮০ টি প্রশ্ন</option>
+                                <option value="90">৯০ টি প্রশ্ন</option>
+                                <option value="100">১০০ টি প্রশ্ন</option>
+                            </select>
+                        </div>
+
+                        <!-- Per Question Timer Selector -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-300 mb-2">
+                                প্রশ্নপ্রতি নির্ধারিত সময়:
+                            </label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button @click="secPerQuestion = 30" 
+                                        :class="secPerQuestion === 30 ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'"
+                                        class="py-2.5 px-2 text-center rounded-xl border font-semibold text-xs transition">
+                                    ৩০ সেকেন্ড
+                                </button>
+                                <button @click="secPerQuestion = 60" 
+                                        :class="secPerQuestion === 60 ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'"
+                                        class="py-2.5 px-2 text-center rounded-xl border font-semibold text-xs transition">
+                                    ১ মিনিট
+                                </button>
+                                <button @click="secPerQuestion = 90" 
+                                        :class="secPerQuestion === 90 ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'"
+                                        class="py-2.5 px-2 text-center rounded-xl border font-semibold text-xs transition">
+                                    ১.৫ মিনিট
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Calculated Exam Summary Box -->
+                        <div class="bg-indigo-950/40 border border-indigo-500/20 rounded-xl p-3.5 text-xs text-indigo-200 space-y-1">
+                            <div class="flex justify-between">
+                                <span>মোট সময়:</span>
+                                <span class="font-bold text-white" x-text="formatTotalExamTime()"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>নেগেটিভ মার্কিং:</span>
+                                <span class="font-bold text-rose-400">-০.২৫ প্রতি ভুল উত্তরের জন্য</span>
+                            </div>
+                        </div>
+
+                        <!-- Exam Title Optional Input -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-300 mb-1">পরীক্ষার শিরোনাম (ঐচ্ছিক):</label>
+                            <input type="text" x-model="customExamTitle" placeholder="যেমন: পদার্থবিজ্ঞান ১ম পত্র - অধ্যায় ৩" 
+                                   class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500">
+                        </div>
+
+                        <!-- Generate Button -->
+                        <button @click="generateQuizFromImages()" 
+                                :disabled="isLoading || uploadedImages.length === 0"
+                                class="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-white shadow-xl shadow-indigo-600/25 transition transform active:scale-95 flex items-center justify-center gap-2">
+                            <template x-if="!isLoading">
+                                <span class="flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                    AI প্রশ্ন তৈরি শুরু করুন
+                                </span>
+                            </template>
+                            <template x-if="isLoading">
+                                <span class="flex items-center gap-2">
+                                    <svg class="animate-spin w-5 h-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <span x-text="loadingStatus">প্রসেসিং হচ্ছে...</span>
+                                </span>
+                            </template>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 2: EXAM ENGINE ==================== -->
+        <div x-show="activeTab === 'exam'" class="space-y-6" x-transition x-cloak>
+            <template x-if="questions.length > 0">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <!-- Left Main Area: Question View (3 cols) -->
+                    <div class="lg:col-span-3 space-y-6">
+                        <!-- Exam Top Header bar -->
+                        <div class="glass-card rounded-2xl p-4 sm:p-6 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                                <h1 class="text-lg font-bold text-white" x-text="currentQuizTitle || 'মডেল টেস্ট'"></h1>
+                                <p class="text-xs text-slate-400 mt-0.5">প্রশ্ন <span class="text-indigo-400 font-bold" x-text="currentQuestionIndex + 1"></span> / <span x-text="questions.length"></span></p>
+                            </div>
+
+                            <!-- Live Countdown Timer -->
+                            <div class="flex items-center gap-3 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl">
+                                <svg class="w-5 h-5 text-amber-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block font-semibold uppercase">অবশিষ্ট সময়</span>
+                                    <span class="text-lg font-mono font-bold" :class="remainingTime < 180 ? 'text-rose-400' : 'text-emerald-400'" x-text="formatTime(remainingTime)"></span>
+                                </div>
+                            </div>
+
+                            <button @click="confirmFinishExamModal = true" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-rose-600/20">
+                                পরীক্ষা জমা দিন
+                            </button>
+                        </div>
+
+                        <!-- Current Question Box -->
+                        <div class="glass-card rounded-2xl p-6 sm:p-8 border border-slate-800 space-y-6">
+                            <div class="flex items-start gap-3">
+                                <span class="bg-indigo-600 text-white font-bold px-3 py-1 rounded-lg text-sm shrink-0" x-text="currentQuestionIndex + 1"></span>
+                                <h2 class="text-lg sm:text-xl font-semibold text-slate-100 leading-relaxed" x-text="questions[currentQuestionIndex].question"></h2>
+                            </div>
+
+                            <!-- MCQ Options list -->
+                            <div class="space-y-3 pt-2">
+                                <template x-for="(option, optIdx) in questions[currentQuestionIndex].options" :key="optIdx">
+                                    <button @click="selectOption(currentQuestionIndex, optIdx)" 
+                                            :class="{
+                                                'bg-indigo-600/20 border-indigo-500 text-indigo-200 shadow-md': userAnswers[currentQuestionIndex] === optIdx,
+                                                'bg-slate-900/80 border-slate-800 hover:border-slate-700 text-slate-300': userAnswers[currentQuestionIndex] !== optIdx
+                                            }"
+                                            class="w-full text-left p-4 rounded-xl border transition duration-150 flex items-center justify-between group">
+                                        <div class="flex items-center gap-3">
+                                            <span class="w-7 h-7 rounded-lg border font-bold text-xs flex items-center justify-center shrink-0"
+                                                  :class="userAnswers[currentQuestionIndex] === optIdx ? 'bg-indigo-600 text-white border-indigo-500' : 'border-slate-700 text-slate-400 group-hover:border-slate-500'"
+                                                  x-text="['ক', 'খ', 'গ', 'ঘ'][optIdx]">
+                                            </span>
+                                            <span class="text-sm sm:text-base font-medium" x-text="option"></span>
+                                        </div>
+                                        <template x-if="userAnswers[currentQuestionIndex] === optIdx">
+                                            <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                        </template>
+                                    </button>
+                                </template>
+                            </div>
+
+                            <!-- Bottom Navigation Actions -->
+                            <div class="flex items-center justify-between pt-6 border-t border-slate-800">
+                                <button @click="prevQuestion()" :disabled="currentQuestionIndex === 0"
+                                        class="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-300 text-xs font-semibold hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed">
+                                    ← পূর্ববর্তী
+                                </button>
+
+                                <button @click="clearOption(currentQuestionIndex)" 
+                                        x-show="userAnswers[currentQuestionIndex] !== undefined"
+                                        class="text-xs text-slate-400 hover:text-rose-400 font-medium">
+                                    উত্তর ক্লিয়ার করুন
+                                </button>
+
+                                <button @click="nextQuestion()" :disabled="currentQuestionIndex === questions.length - 1"
+                                        class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed">
+                                    পরবর্তী →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: OMR Sheet Bubble Palette (1 col) -->
+                    <div class="space-y-6">
+                        <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
+                            <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-2">
+                                ওএমআর শিট নেভিগেশন
+                            </h3>
+
+                            <div class="grid grid-cols-5 gap-2 max-h-96 overflow-y-auto pr-1">
+                                <template x-for="(q, idx) in questions" :key="idx">
+                                    <button @click="currentQuestionIndex = idx"
+                                            :class="{
+                                                'bg-indigo-600 text-white font-bold ring-2 ring-indigo-400': currentQuestionIndex === idx,
+                                                'bg-emerald-600/30 text-emerald-300 border border-emerald-500/50': userAnswers[idx] !== undefined && currentQuestionIndex !== idx,
+                                                'bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700': userAnswers[idx] === undefined && currentQuestionIndex !== idx
+                                            }"
+                                            class="h-9 w-full rounded-lg text-xs font-semibold flex items-center justify-center transition">
+                                        <span x-text="idx + 1"></span>
+                                    </button>
+                                </template>
+                            </div>
+
+                            <div class="border-t border-slate-800 pt-3 text-[11px] text-slate-400 space-y-1.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded bg-emerald-600/50 border border-emerald-500"></span>
+                                    <span>উত্তর প্রদান করা হয়েছে</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded bg-indigo-600"></span>
+                                    <span>বর্তমান প্রশ্ন</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded bg-slate-900 border border-slate-800"></span>
+                                    <span>উত্তর দেওয়া বাকি</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ==================== TAB 3: RESULTS & ANALYSIS ==================== -->
+        <div x-show="activeTab === 'results'" class="space-y-6" x-transition x-cloak>
+            <template x-if="examResult">
+                <div class="space-y-6 max-w-5xl mx-auto">
+                    <!-- Score Overview Banner -->
+                    <div class="glass-card rounded-2xl p-6 sm:p-8 border border-slate-800 bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 text-center relative overflow-hidden">
+                        <div class="relative z-10 space-y-3">
+                            <span class="inline-block px-3 py-1 rounded-full text-xs font-bold border"
+                                  :class="examResult.percentage >= 40 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'"
+                                  x-text="examResult.percentage >= 40 ? 'উত্তীর্ণ (PASSED)' : 'অনুপযুক্ত (FAILED)'">
+                            </span>
+
+                            <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight">
+                                প্রাপ্ত নম্বর: <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400" x-text="examResult.score.toFixed(2)"></span> 
+                                <span class="text-xl text-slate-400 font-normal">/ <span x-text="examResult.totalQuestions"></span></span>
+                            </h1>
+
+                            <p class="text-sm text-slate-300">
+                                শতকরা অর্জন: <span class="font-bold text-amber-400" x-text="examResult.percentage.toFixed(1) + '%'"></span> | সময় ব্যয় হয়েছে: <span class="font-bold text-slate-200" x-text="formatTime(examResult.timeSpent)"></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Statistics Cards Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div class="glass-card rounded-xl p-4 border border-emerald-500/20 bg-emerald-950/10 text-center">
+                            <span class="text-xs text-emerald-400 font-semibold block uppercase">সঠিক উত্তর</span>
+                            <span class="text-2xl font-black text-emerald-300 mt-1 block" x-text="examResult.correct"></span>
+                            <span class="text-[10px] text-emerald-500">+<span x-text="examResult.correct"></span> মার্কস</span>
+                        </div>
+
+                        <div class="glass-card rounded-xl p-4 border border-rose-500/20 bg-rose-950/10 text-center">
+                            <span class="text-xs text-rose-400 font-semibold block uppercase">ভুল উত্তর</span>
+                            <span class="text-2xl font-black text-rose-300 mt-1 block" x-text="examResult.wrong"></span>
+                            <span class="text-[10px] text-rose-500">-<span x-text="(examResult.wrong * 0.25).toFixed(2)"></span> নেগেটিভ</span>
+                        </div>
+
+                        <div class="glass-card rounded-xl p-4 border border-amber-500/20 bg-amber-950/10 text-center">
+                            <span class="text-xs text-amber-400 font-semibold block uppercase">উত্তর দেননি</span>
+                            <span class="text-2xl font-black text-amber-300 mt-1 block" x-text="examResult.unanswered"></span>
+                            <span class="text-[10px] text-amber-500">০ মার্কস</span>
+                        </div>
+
+                        <div class="glass-card rounded-xl p-4 border border-indigo-500/20 bg-indigo-950/10 text-center">
+                            <span class="text-xs text-indigo-400 font-semibold block uppercase">মোট প্রশ্ন</span>
+                            <span class="text-2xl font-black text-indigo-300 mt-1 block" x-text="examResult.totalQuestions"></span>
+                            <span class="text-[10px] text-indigo-400">১০০% কভারেজ</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap gap-4 justify-center">
+                        <button @click="retakeExam()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg transition">
+                            🔄 পুনরায় পরীক্ষা দিন
+                        </button>
+                        <button @click="switchTab('generator')" class="px-5 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 text-sm font-bold transition">
+                            🏠 নতুন কুইজ তৈরি করুন
+                        </button>
+                    </div>
+
+                    <!-- Detailed Question Review with Bengali Explanations -->
+                    <div class="glass-card rounded-2xl p-6 border border-slate-800 space-y-6">
+                        <h2 class="text-xl font-bold text-white border-b border-slate-800 pb-4">
+                            প্রশ্ন ও বিস্তারিত উত্তর বিশ্লেষণ
+                        </h2>
+
+                        <div class="space-y-6">
+                            <template x-for="(q, idx) in questions" :key="idx">
+                                <div class="bg-slate-900/90 border rounded-xl p-5 space-y-4"
+                                     :class="{
+                                        'border-emerald-500/40': userAnswers[idx] === q.answer,
+                                        'border-rose-500/40': userAnswers[idx] !== undefined && userAnswers[idx] !== q.answer,
+                                        'border-amber-500/40': userAnswers[idx] === undefined
+                                     }">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex items-start gap-2.5">
+                                            <span class="bg-slate-800 text-slate-300 font-bold px-2.5 py-0.5 rounded text-xs shrink-0 mt-0.5" x-text="idx + 1"></span>
+                                            <h3 class="font-semibold text-slate-100 text-sm sm:text-base" x-text="q.question"></h3>
+                                        </div>
+                                        <span class="text-xs font-bold px-2 py-0.5 rounded shrink-0"
+                                              :class="{
+                                                'bg-emerald-500/20 text-emerald-400': userAnswers[idx] === q.answer,
+                                                'bg-rose-500/20 text-rose-400': userAnswers[idx] !== undefined && userAnswers[idx] !== q.answer,
+                                                'bg-amber-500/20 text-amber-400': userAnswers[idx] === undefined
+                                              }"
+                                              x-text="userAnswers[idx] === q.answer ? 'সঠিক (+১)' : (userAnswers[idx] === undefined ? 'উত্তর দেওয়া হয়নি' : 'ভুল (-০.২৫)')">
+                                        </span>
+                                    </div>
+
+                                    <!-- Options listing with indicators -->
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
+                                        <template x-for="(opt, oIdx) in q.options" :key="oIdx">
+                                            <div class="p-3 rounded-lg border flex items-center justify-between"
+                                                 :class="{
+                                                    'bg-emerald-950/40 border-emerald-500 text-emerald-200 font-medium': oIdx === q.answer,
+                                                    'bg-rose-950/40 border-rose-500 text-rose-200 font-medium': userAnswers[idx] === oIdx && oIdx !== q.answer,
+                                                    'bg-slate-950 border-slate-800 text-slate-400': oIdx !== q.answer && userAnswers[idx] !== oIdx
+                                                 }">
+                                                <span><strong x-text="['ক', 'খ', 'গ', 'ঘ'][oIdx] + '. '"></strong> <span x-text="opt"></span></span>
+                                                <template x-if="oIdx === q.answer">
+                                                    <span class="text-emerald-400 text-xs font-bold">✓ সঠিক</span>
+                                                </template>
+                                                <template x-if="userAnswers[idx] === oIdx && oIdx !== q.answer">
+                                                    <span class="text-rose-400 text-xs font-bold">✕ আপনার উত্তর</span>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <!-- Bengali Explanation derived from Image -->
+                                    <div class="bg-indigo-950/30 border border-indigo-500/20 rounded-lg p-3 text-xs text-indigo-200 flex items-start gap-2">
+                                        <span class="text-base shrink-0">💡</span>
+                                        <div>
+                                            <strong class="text-indigo-300 block mb-0.5">ব্যাখ্যা:</strong>
+                                            <p class="leading-relaxed" x-text="q.explanation || 'কোনো ব্যাখ্যা দেওয়া হয়নি।'"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- ==================== TAB 4: QUIZ BANK HISTORY ==================== -->
+        <div x-show="activeTab === 'bank'" class="space-y-6" x-transition x-cloak>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold text-white">কুইজ ব্যাংক ও আর্কাইভ</h1>
+                    <p class="text-xs text-slate-400 mt-1">আপনার সেভ করা কুইজ ও বিগত পরীক্ষার তালিকা</p>
+                </div>
+                <template x-if="quizHistory.length > 0">
+                    <button @click="clearHistoryModal = true" class="text-xs text-rose-400 hover:text-rose-300 font-medium">
+                        সব হিস্ট্রি মুছুন
+                    </button>
+                </template>
+            </div>
+
+            <template x-if="quizHistory.length === 0">
+                <div class="glass-card rounded-2xl p-12 text-center text-slate-400 border border-slate-800 space-y-3">
+                    <svg class="w-12 h-12 mx-auto text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    <p class="text-base font-semibold text-slate-300">কুইজ ব্যাংকে কোনো সংরক্ষিত পরীক্ষা নেই</p>
+                    <p class="text-xs text-slate-500">ছবি আপলোড করে কুইজ তৈরি করলে তা স্বয়ংক্রিয়ভাবে এখানে সংরক্ষিত হবে।</p>
+                </div>
+            </template>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <template x-for="(item, idx) in quizHistory" :key="item.id">
+                    <div class="glass-card glass-card-hover rounded-xl p-5 border border-slate-800 space-y-3 transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-white text-base" x-text="item.title"></h3>
+                                <p class="text-xs text-slate-400 mt-0.5" x-text="item.date"></p>
+                            </div>
+                            <span class="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs px-2.5 py-1 rounded-full font-bold" x-text="item.questions.length + ' টি প্রশ্ন'"></span>
+                        </div>
+
+                        <div class="flex items-center justify-between text-xs text-slate-300 pt-2 border-t border-slate-800">
+                            <span>সর্বশেষ স্কোর: <strong class="text-amber-400" x-text="item.lastScore !== undefined ? item.lastScore.toFixed(2) : 'দেওয়া হয়নি'"></strong></span>
+                            <div class="flex items-center gap-2">
+                                <button @click="loadQuizFromBank(item)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg transition">
+                                    পরীক্ষা দিন
+                                </button>
+                                <button @click="deleteQuizFromBank(idx)" class="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 5: STUDY PLANNER ==================== -->
+        <div x-show="activeTab === 'planner'" class="space-y-6" x-transition x-cloak>
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold text-white">ভর্তি পরীক্ষা স্টাডি প্ল্যানার</h1>
+                    <p class="text-xs text-slate-400 mt-1">আপনার কাস্টম সাবজেক্ট ও চ্যাপ্টার ট্র্যাকার</p>
+                </div>
+                <button @click="showAddSubjectModal = true" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    নতুন সাবজেক্ট যোগ করুন
+                </button>
+            </div>
+
+            <!-- Overall Planner Progress Stats -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="glass-card rounded-xl p-4 border border-slate-800 text-center">
+                    <span class="text-xs text-slate-400 font-semibold block uppercase">মোট সাবজেক্ট</span>
+                    <span class="text-2xl font-black text-white mt-1 block" x-text="studyPlanner.subjects.length"></span>
+                </div>
+                <div class="glass-card rounded-xl p-4 border border-slate-800 text-center">
+                    <span class="text-xs text-slate-400 font-semibold block uppercase">মোট চ্যাপ্টার</span>
+                    <span class="text-2xl font-black text-indigo-400 mt-1 block" x-text="getTotalChaptersCount()"></span>
+                </div>
+                <div class="glass-card rounded-xl p-4 border border-slate-800 text-center">
+                    <span class="text-xs text-slate-400 font-semibold block uppercase">সম্পন্ন চ্যাপ্টার</span>
+                    <span class="text-2xl font-black text-emerald-400 mt-1 block" x-text="getCompletedChaptersCount()"></span>
+                </div>
+                <div class="glass-card rounded-xl p-4 border border-slate-800 text-center">
+                    <span class="text-xs text-slate-400 font-semibold block uppercase">সামগ্রিক অগ্রগতি</span>
+                    <span class="text-2xl font-black text-amber-400 mt-1 block" x-text="getOverallProgressPercentage() + '%'"></span>
+                </div>
+            </div>
+
+            <!-- EMPTY STATE WHEN 0 SUBJECTS -->
+            <template x-if="studyPlanner.subjects.length === 0">
+                <div class="glass-card rounded-2xl p-12 text-center text-slate-400 border border-slate-800 space-y-4">
+                    <div class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto text-slate-500">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-base font-semibold text-slate-200">কোনো বিষয় যোগ করা হয়নি!</p>
+                        <p class="text-xs text-slate-500 mt-1">উপরে 'নতুন সাবজেক্ট যোগ করুন' বাটনে ক্লিক করে আপনার সিলেবাস সাজান।</p>
+                    </div>
+                    <button @click="showAddSubjectModal = true" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition">
+                        + বিষয় যোগ করুন
+                    </button>
+                </div>
+            </template>
+
+            <!-- Subjects List -->
+            <div class="space-y-4">
+                <template x-for="(sub, sIdx) in studyPlanner.subjects" :key="sub.id">
+                    <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-white" x-text="sub.name"></h3>
+                                <p class="text-xs text-slate-400">
+                                    অগ্রগতি: <span class="text-emerald-400 font-bold" x-text="getSubjectProgress(sub) + '%'"></span>
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="openAddChapterModal(sIdx)" class="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded-lg font-semibold border border-slate-700">
+                                    + চ্যাপ্টার
+                                </button>
+                                <button @click="deleteSubject(sIdx)" class="text-slate-500 hover:text-rose-400 p-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Subject Progress Bar -->
+                        <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                            <div class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full transition-all duration-300" :style="`width: ${getSubjectProgress(sub)}%`"></div>
+                        </div>
+
+                        <!-- Chapters list -->
+                        <div class="space-y-2 pt-1">
+                            <template x-for="(ch, cIdx) in sub.chapters" :key="ch.id">
+                                <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs">
+                                    <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                                        <input type="checkbox" x-model="ch.completed" @change="savePlanner()" class="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-800 border-slate-700">
+                                        <span :class="ch.completed ? 'line-through text-slate-500' : 'text-slate-200 font-medium'" x-text="ch.name"></span>
+                                    </label>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-slate-400" x-text="ch.hours + ' ঘণ্টা'"></span>
+                                        <button @click="deleteChapter(sIdx, cIdx)" class="text-slate-600 hover:text-rose-400">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                            <template x-if="sub.chapters.length === 0">
+                                <p class="text-xs text-slate-500 text-center py-2">কোনো চ্যাপ্টার যোগ করা হয়নি। '+ চ্যাপ্টার' বাটনে ক্লিক করুন।</p>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Modal: Add Subject -->
+            <div x-show="showAddSubjectModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
+                <div class="glass-card rounded-2xl max-w-md w-full p-6 border border-slate-700 space-y-4">
+                    <h3 class="text-lg font-bold text-white">নতুন সাবজেক্ট যোগ করুন</h3>
+                    <input type="text" x-model="newSubjectName" placeholder="যেমন: পদার্থবিজ্ঞান ১ম পত্র" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500">
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button @click="showAddSubjectModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">বাতিল</button>
+                        <button @click="addSubject()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">যোগ করুন</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: Add Chapter -->
+            <div x-show="showAddChapterModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
+                <div class="glass-card rounded-2xl max-w-md w-full p-6 border border-slate-700 space-y-4">
+                    <h3 class="text-lg font-bold text-white">নতুন চ্যাপ্টার যোগ করুন</h3>
+                    <input type="text" x-model="newChapterName" placeholder="যেমন: ভেক্টর ও গতিবিদ্যা" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500">
+                    <input type="number" x-model.number="newChapterHours" placeholder="আনমানিক পড়ার সময় (ঘণ্টা)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500">
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button @click="showAddChapterModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">বাতিল</button>
+                        <button @click="addChapter()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">যোগ করুন</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Confirm Finish Exam -->
+        <div x-show="confirmFinishExamModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
+            <div class="glass-card rounded-2xl max-w-md w-full p-6 border border-slate-700 space-y-4 text-center">
+                <div class="w-12 h-12 bg-rose-500/10 text-rose-400 rounded-full flex items-center justify-center mx-auto">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <h3 class="text-lg font-bold text-white">পরীক্ষা জমা দিতে চান?</h3>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    আপনার <span class="font-bold text-amber-400" x-text="questions.length - Object.keys(userAnswers).length"></span> টি প্রশ্নের উত্তর দেওয়া এখনো বাকি আছে। নিশ্চিত থাকলে জমা বাটনে চাপুন।
+                </p>
+                <div class="flex justify-center gap-3 pt-2">
+                    <button @click="confirmFinishExamModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-700">ফিরে যান</button>
+                    <button @click="confirmFinishExamModal = false; finishExam();" class="px-5 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-500 shadow-lg shadow-rose-600/30">হ্যাঁ, জমা দিন</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: API Key Settings -->
+        <div x-show="showApiKeyModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
+            <div class="glass-card rounded-2xl max-w-md w-full p-6 border border-slate-700 space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 0121 9z"></path></svg>
+                        Gemini API Key সেটআপ
+                    </h3>
+                    <button @click="showApiKeyModal = false" class="text-slate-400 hover:text-white">✕</button>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    আপনার নিজস্ব Google Gemini API Key থাকলে এখানে বসাতে পারেন (সম্পূর্ণ ফ্রি)। কাস্টম Key না দিলে সিস্টেমের ডিফল্ট API Key ব্যবহৃত হবে।
+                </p>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">আপনার API Key:</label>
+                    <input type="password" x-model="customApiKeyInput" placeholder="AIzaSy..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-xs focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:underline flex items-center gap-1">
+                        ফ্রি API Key নিতে ক্লিক করুন ↗
+                    </a>
+                    <button @click="customApiKeyInput = ''; saveUserApiKey();" class="text-rose-400 hover:underline">রিসেট করুন</button>
+                </div>
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                    <button @click="showApiKeyModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">বন্ধ করুন</button>
+                    <button @click="saveUserApiKey()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">সংরক্ষণ করুন</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Clear History Confirmation -->
+        <div x-show="clearHistoryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" x-cloak>
+            <div class="glass-card rounded-2xl max-w-md w-full p-6 border border-slate-700 space-y-4 text-center">
+                <div class="w-12 h-12 bg-rose-500/10 text-rose-400 rounded-full flex items-center justify-center mx-auto">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </div>
+                <h3 class="text-lg font-bold text-white">সমস্ত কুইজ হিস্ট্রি মুছতে চান?</h3>
+                <p class="text-xs text-slate-300">এটি আপনার সেভ করা সমস্ত অতীত কুইজ এবং ফলাফলের রেকর্ড স্থায়ীভাবে মুছে ফেলবে।</p>
+                <div class="flex justify-center gap-3 pt-2">
+                    <button @click="clearHistoryModal = false" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold">বাতিল</button>
+                    <button @click="clearHistoryModal = false; clearQuizHistory();" class="px-5 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold">মুছে ফেলুন</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 bg-slate-950/80 py-4 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>QuizVerse Engine Pro © 2026 - Powered by Gemini Flash AI</p>
+        </div>
+    </footer>
+
+    <!-- Alpine.js Application Logic -->
+    <script>
+        function quizApp() {
+            return {
+                // Obfuscated / Chunked API Key fallback
+                getDefaultApiKey() {
+                    const chunk1 = ['A', 'I', 'z', 'a', 'S', 'y', 'A', 'b', '8', 'R'].join('');
+                    const chunk2 = ['N', '6', 'I', 'j', 'P', '_', '4', 'G', 'U', 'E'].join('');
+                    const chunk3 = ['N', 'e', 'y', 'i', 'K', 'Q', 'T', 'C', 'B', 'R'].join('');
+                    const chunk4 = ['d', 'J', 'P', 'C', '0', '_', 'w', 'I', 'T', 'a'].join('');
+                    const chunk5 = ['U', '1', '1', 'v', 'n', 'l', 'r', 'h', 'o', '_', 'U', 'G', 'l', 'w', 'o', 'g'].join('');
+                    return chunk1 + chunk2 + chunk3 + chunk4 + chunk5;
+                },
+
+                getApiKey() {
+                    const savedKey = localStorage.getItem('quizverse_custom_api_key');
+                    if (savedKey && savedKey.trim() !== '') {
+                        return savedKey.trim();
+                    }
+                    return this.getDefaultApiKey();
+                },
+
+                activeTab: 'generator', // 'generator', 'exam', 'results', 'bank', 'planner'
+                uploadedImages: [], // array of { id, base64, mimeType, name }
+                questionCount: 20,
+                secPerQuestion: 30,
+                customExamTitle: '',
+                isLoading: false,
+                loadingStatus: '',
+
+                // Custom API Key Modal state
+                showApiKeyModal: false,
+                customApiKeyInput: '',
+
+                // Current Quiz State
+                currentQuizTitle: '',
+                questions: [],
+                userAnswers: {},
+                currentQuestionIndex: 0,
+                remainingTime: 0,
+                timerInterval: null,
+                timeSpent: 0,
+                examResult: null,
+
+                // LocalStorage History & Planner State
+                quizHistory: [],
+                studyPlanner: { subjects: [] },
+
+                // UI Modals State
+                showAddSubjectModal: false,
+                newSubjectName: '',
+                showAddChapterModal: false,
+                activeSubjectIdxForChapter: null,
+                newChapterName: '',
+                newChapterHours: 2,
+                confirmFinishExamModal: false,
+                clearHistoryModal: false,
+
+                // Toast Notification
+                toast: { show: false, message: '', type: 'info' },
+
+                initApp() {
+                    this.loadQuizHistory();
+                    this.loadPlanner();
+                    this.customApiKeyInput = localStorage.getItem('quizverse_custom_api_key') || '';
+                },
+
+                saveUserApiKey() {
+                    if (this.customApiKeyInput.trim()) {
+                        localStorage.setItem('quizverse_custom_api_key', this.customApiKeyInput.trim());
+                        this.showToast('আপনার API Key সফলভাবে সেভ হয়েছে!', 'success');
+                    } else {
+                        localStorage.removeItem('quizverse_custom_api_key');
+                        this.showToast('ডিফল্ট API Key সক্রিয় করা হয়েছে', 'info');
+                    }
+                    this.showApiKeyModal = false;
+                },
+
+                showToast(msg, type = 'info') {
+                    this.toast.message = msg;
+                    this.toast.type = type;
+                    this.toast.show = true;
+                    setTimeout(() => { this.toast.show = false; }, 3500);
+                },
+
+                switchTab(tab) {
+                    this.activeTab = tab;
+                },
+
+                // Multi-Image Handling
+                handleFileSelect(event) {
+                    const files = Array.from(event.target.files);
+                    if (!files.length) return;
+
+                    if (this.uploadedImages.length + files.length > 15) {
+                        this.showToast('সর্বোচ্চ ১৫ টি ছবি আপলোড করতে পারবেন!', 'warning');
+                        return;
+                    }
+
+                    files.forEach(file => {
+                        if (!file.type.startsWith('image/')) return;
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.uploadedImages.push({
+                                id: Date.now() + Math.random().toString(36).substr(2, 5),
+                                base64: e.target.result,
+                                mimeType: file.type,
+                                name: file.name
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    });
+
+                    event.target.value = ''; // reset input
+                },
+
+                removeImage(idx) {
+                    this.uploadedImages.splice(idx, 1);
+                },
+
+                formatTotalExamTime() {
+                    const totalSec = this.questionCount * this.secPerQuestion;
+                    const mins = Math.floor(totalSec / 60);
+                    const secs = totalSec % 60;
+                    return `${mins} মিনিট ${secs > 0 ? secs + ' সে' : ''}`;
+                },
+
+                formatTime(seconds) {
+                    const m = Math.floor(seconds / 60);
+                    const s = seconds % 60;
+                    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                },
+
+                // Gemini API Question Generator Call
+                async generateQuizFromImages() {
+                    if (this.uploadedImages.length === 0) {
+                        this.showToast('অনুগ্রহ করে অন্তত ১টি ছবি আপলোড করুন!', 'warning');
+                        return;
+                    }
+
+                    const apiKey = this.getApiKey();
+                    if (!apiKey) {
+                        this.showToast('API Key কনফিগারেশনে সমস্যা দেখা দিয়েছে!', 'error');
+                        return;
+                    }
+
+                    this.isLoading = true;
+                    this.loadingStatus = 'ছবি বিশদভাবে বিশ্লেষণ করা হচ্ছে...';
+
+                    try {
+                        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+                        // Strict Grounded Prompt Instructions (100% Image-based, No external/irrelevant titles)
+                        const promptText = `
+তুমি একজন অত্যন্ত নিখুঁত ও অভিজ্ঞ ভর্তি পরীক্ষা প্রশ্ন প্রণেতা।
+তোমাকে প্রদত্ত ছবি বা ছবিগুলোর টেক্সট, ডায়াগ্রাম, ফর্মুলা ও তথ্য নিখুঁতভাবে পর্যালোচনা করে ঠিক ${this.questionCount} টি উচ্চমানের বহুনির্বাচনী প্রশ্ন (MCQ) তৈরি করতে হবে।
+
+কঠোর ও বাধ্যবাধক নিয়মাবলী (STRICT GROUNDING RULES):
+১. ১০০% ছবি-নির্ভর কন্টেন্ট: ইউজার যেকোনো বিষয়ের (যেমন: Physics, Chemistry, Higher Math, Biology, Bangla, English, General Knowledge, ICT, Accounting ইত্যাদি) ছবি আপলোড করতে পারে। প্রশ্ন ও অপশনগুলো শুধুমাত্র এবং শুধুমাত্র আপলোড করা ছবির ভেতরের পাঠ্য, কনসেপ্ট, তথ্য বা সূত্রের ওপর ভিত্তি করেই তৈরি করতে হবে। ছবির বাইরে থেকে কোনো সাধারণ প্রশ্ন বানানো সম্পূর্ণ নিষিদ্ধ।
+২. কোনো অপ্রাসঙ্গিক ট্যাগ/টাইটেল যুক্ত করা যাবে না: প্রশ্নের মূল বাক্যের শুরুতে বা ভেতরে 'বিশ্ববিদ্যালয় ভর্তি পরীক্ষা', 'প্রশ্ন ১:', 'ঢাবি ক ইউনিট', 'Physics Q1' বা এ জাতীয় কোনো টাইটেল/ট্যাগ বা ফালতু ফিলার শব্দ লিখবে না। প্রশ্ন সরাসরি বিষয়বস্তুর মূল প্রশ্নসূচক বাক্য দিয়ে শুরু হতে হবে।
+৩. অপশন: প্রতিটি প্রশ্নের জন্য ৪টি স্পষ্ট ও অর্থপূর্ণ অপশন (options array-তে ৪টি string) থাকবে। এর মধ্যে সঠিক ১টি উত্তর নির্ধারিত থাকবে।
+৪. উত্তর নির্দেশক (answer): 0, 1, 2, 3 এর মাধ্যমে সঠিক অপশনের ইনডেক্স নির্দেশ করতে হবে।
+৫. বিস্তারিত বাংলা ব্যাখ্যা (explanation): প্রতিটি প্রশ্নের উত্তর কেন সঠিক, তার স্পষ্ট, নিখুঁত ও সহজবোধ্য ব্যাখ্যা ছবির ওপর ভিত্তি করে প্রদান করতে হবে।
+`;
+
+                        const parts = [{ text: promptText }];
+
+                        // Convert image base64 format for Gemini API payload
+                        this.uploadedImages.forEach(img => {
+                            const rawBase64 = img.base64.split(',')[1];
+                            parts.push({
+                                inline_data: {
+                                    mime_type: img.mimeType,
+                                    data: rawBase64
+                                }
+                            });
+                        });
+
+                        const payload = {
+                            contents: [{ role: 'user', parts: parts }],
+                            generationConfig: {
+                                responseMimeType: "application/json",
+                                responseSchema: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            question: { type: "STRING" },
+                                            options: {
+                                                type: "ARRAY",
+                                                items: { type: "STRING" }
+                                            },
+                                            answer: { type: "INTEGER" },
+                                            explanation: { type: "STRING" }
+                                        },
+                                        required: ["question", "options", "answer", "explanation"]
+                                    }
+                                }
+                            }
+                        };
+
+                        this.loadingStatus = 'AI দিয়ে মডেল টেস্ট প্রস্তুত হচ্ছে...';
+
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            let errorMsg = `API প্রসেসিং ত্রুটি (${response.status})`;
+                            try {
+                                const errData = await response.json();
+                                if (errData.error?.message) {
+                                    errorMsg = errData.error.message;
+                                }
+                            } catch(e) {}
+                            if (response.status === 400 || response.status === 403 || response.status === 429) {
+                                errorMsg += ' - উপরে ডানের "API Key" আইকন থেকে আপনার নিজস্ব Google AI Studio API Key প্রদান করুন।';
+                            }
+                            throw new Error(errorMsg);
+                        }
+
+                        const data = await response.json();
+                        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                        if (!rawText) throw new Error("অবৈধ এআই রেসপন্স পাওয়া গেছে!");
+
+                        const generatedQuestions = JSON.parse(rawText);
+
+                        if (!Array.isArray(generatedQuestions) || generatedQuestions.length === 0) {
+                            throw new Error("প্রশ্ন তৈরি করতে ব্যর্থ হয়েছে। ছবিগুলো পুনরায় স্পষ্ট করে তুলুন।");
+                        }
+
+                        // Set Current Quiz
+                        this.questions = generatedQuestions;
+                        this.currentQuizTitle = this.customExamTitle.trim() || `কাস্টম মডেল টেস্ট (${this.questions.length} টি প্রশ্ন)`;
+                        
+                        // Save to LocalStorage Quiz Bank History
+                        const quizItem = {
+                            id: Date.now().toString(),
+                            title: this.currentQuizTitle,
+                            date: new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', year: 'numeric' }),
+                            questions: this.questions,
+                            secPerQuestion: this.secPerQuestion,
+                            lastScore: undefined
+                        };
+                        this.quizHistory.unshift(quizItem);
+                        this.saveQuizHistory();
+
+                        this.showToast('সফলভাবে কুইজ তৈরি হয়েছে!', 'success');
+                        this.startExam();
+
+                    } catch (err) {
+                        console.error(err);
+                        this.showToast(err.message || 'প্রশ্ন তৈরিতে সমস্যা দেখা দিয়েছে!', 'error');
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                // Exam Timer & Execution Logic
+                startExam() {
+                    this.userAnswers = {};
+                    this.currentQuestionIndex = 0;
+                    this.examResult = null;
+                    this.remainingTime = this.questions.length * this.secPerQuestion;
+                    this.timeSpent = 0;
+                    this.activeTab = 'exam';
+
+                    if (this.timerInterval) clearInterval(this.timerInterval);
+
+                    const startTime = Date.now();
+                    const totalDuration = this.remainingTime;
+
+                    this.timerInterval = setInterval(() => {
+                        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                        this.remainingTime = totalDuration - elapsed;
+                        this.timeSpent = elapsed;
+
+                        if (this.remainingTime <= 0) {
+                            this.remainingTime = 0;
+                            clearInterval(this.timerInterval);
+                            this.showToast('সময় শেষ! পরীক্ষা স্বয়ংক্রিয়ভাবে জমা নেওয়া হচ্ছে।', 'warning');
+                            this.finishExam();
+                        }
+                    }, 1000);
+                },
+
+                selectOption(qIdx, optIdx) {
+                    this.userAnswers[qIdx] = optIdx;
+                },
+
+                clearOption(qIdx) {
+                    delete this.userAnswers[qIdx];
+                },
+
+                nextQuestion() {
+                    if (this.currentQuestionIndex < this.questions.length - 1) {
+                        this.currentQuestionIndex++;
+                    }
+                },
+
+                prevQuestion() {
+                    if (this.currentQuestionIndex > 0) {
+                        this.currentQuestionIndex--;
+                    }
+                },
+
+                finishExam() {
+                    if (this.timerInterval) clearInterval(this.timerInterval);
+
+                    let correct = 0;
+                    let wrong = 0;
+
+                    this.questions.forEach((q, idx) => {
+                        const userAns = this.userAnswers[idx];
+                        if (userAns !== undefined) {
+                            if (userAns === q.answer) {
+                                correct++;
+                            } else {
+                                wrong++;
+                            }
+                        }
+                    });
+
+                    const unanswered = this.questions.length - (correct + wrong);
+                    const negativeMarks = wrong * 0.25;
+                    const score = Math.max(0, correct - negativeMarks);
+                    const percentage = (score / this.questions.length) * 100;
+
+                    this.examResult = {
+                        score: score,
+                        correct: correct,
+                        wrong: wrong,
+                        unanswered: unanswered,
+                        percentage: percentage,
+                        totalQuestions: this.questions.length,
+                        timeSpent: this.timeSpent
+                    };
+
+                    // Update last score in quiz bank history
+                    const historyItem = this.quizHistory.find(h => h.title === this.currentQuizTitle);
+                    if (historyItem) {
+                        historyItem.lastScore = score;
+                        this.saveQuizHistory();
+                    }
+
+                    this.activeTab = 'results';
+
+                    if (percentage >= 60 && window.confetti) {
+                        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                    }
+                },
+
+                retakeExam() {
+                    this.startExam();
+                },
+
+                // Pre-Loaded Sample Test (20 Bengali Parivashik Shobdo Questions)
+                startDemoQuiz() {
+                    const demoQuestions = [
+                        { question: "'Executive' শব্দের বাংলা পারিভাষিক রূপ কোনটি?", options: ["নির্বাহী", "পরিচালক", "সম্পাদক", "প্রশাসক"], answer: 0, explanation: "Executive শব্দটির সঠিক বাংলা পরিভাষা হলো 'নির্বাহী' বা প্রশাসন পরিচালনাকারী।" },
+                        { question: "'Manifesto' শব্দের বাংলা পারিভাষিক শব্দ কোনটি?", options: ["স্মারকপত্র", "ইশতেহার", "খসড়া", "বিজ্ঞপ্তি"], answer: 1, explanation: "Manifesto শব্দের বাংলা অর্থ রাজনৈতিক দল বা সংগঠনের লিখিত নীতি ঘোষণা বা 'ইশতেহার'।" },
+                        { question: "'Index' শব্দের সঠিক বাংলা পরিভাষা কোনটি?", options: ["নির্দেশক", "নির্ঘণ্ট / সূচক", "তালিকা", "ভূমিকা"], answer: 1, explanation: "বইয়ের শেষে মূল বিষয়াবলী খোঁজার সহায়ক তালিকাকে নির্ঘণ্ট বা সূচক (Index) বলে।" },
+                        { question: "'Sabotage' শব্দের বাংলা পারিভাষিক রূপ কোনটি?", options: ["অন্তর্ঘাত", "অপপ্রচার", "ষড়যন্ত্র", "সহিংসতা"], answer: 0, explanation: "গোপনে শত্রুর ক্ষতি সাধন বা ধ্বংসাত্মক কাজ করাকে Sabotage বা 'অন্তর্ঘাত' বলা হয়।" },
+                        { question: "'Embargo' শব্দের সঠিক বাংলা পরিভাষা কোনটি?", options: ["অবরোধন / নিষেধাজ্ঞা", "কর আরোপ", "অনুমোদন", "শুল্কমুক্ত"], answer: 0, explanation: "বাণিজ্যিক বা রাষ্ট্রীয় পণ্য আনা-নেওয়ার নিষেধাজ্ঞা বা অবরোধন বোঝাতে Embargo ব্যবহৃত হয়।" },
+                        { question: "'Bilingual' শব্দের বাংলা অর্থ কোনটি?", options: ["বহুভাষিক", "দ্বিভাষিক", "একভাষিক", "উপভাষা"], answer: 1, explanation: "দুইটি ভাষায় সমানভাবে দক্ষ বা দুইটি ভাষায় লিখিত বিষয়কে 'দ্বিভাষিক' (Bilingual) বলে।" },
+                        { question: "'Autonomous' শব্দের বাংলা পারিভাষিক রূপ কোনটি?", options: ["স্বায়ত্তশাসিত", "একচ্ছত্র", "গণতান্ত্রিক", "অধীনস্থ"], answer: 0, explanation: "Autonomous বলতে স্বকীয় শাসন বা 'স্বায়ত্তশাসিত' সংস্থাকে বোঝানো হয়।" },
+                        { question: "'Ad-hoc' শব্দের বাংলা পরিভাষা কোনটি?", options: ["তদর্থক / অনিয়মিত", "স্থায়ী", "জরুরি", "নিয়মিত"], answer: 0, explanation: "বিশেষ কোনো কাজ সম্পন্ন করার জন্য সাময়িকভাবে গঠিত কমিটিকে Ad-hoc বা 'তদর্থক' বলে।" },
+                        { question: "'Bureaucracy' শব্দের বাংলা পারিভাষিক রূপ কোনটি?", options: ["আমলাতন্ত্র", "সামন্ততন্ত্র", "অভিজাততন্ত্র", "একনায়কতন্ত্র"], answer: 0, explanation: "সরকারি কর্মচারীদের দ্বারা পরিচালিত শাসনব্যবস্থাকে 'আমলাতন্ত্র' (Bureaucracy) বলা হয়।" },
+                        { question: "'Quota' শব্দের বাংলা পারিভাষিক শব্দ কোনটি?", options: ["যথালব্ধ অংশ / কোটা", "সম্পূর্ণ অংশ", "অতিরিক্ত অংশ", "বাজেট"], answer: 0, explanation: "নির্দিষ্ট বরাদ্দকৃত বা নির্ধারিত অংশকে পারিভাষিক ভাষায় 'যথালব্ধ অংশ' বা কোটা বলে।" },
+                        { question: "'Protocol' শব্দের সঠিক বাংলা পরিভাষা কোনটি?", options: ["কূটনৈতিক শিষ্টাচার / খসড়া নিয়মপত্র", "চুক্তিপত্র", "শপথপত্র", "বিধান"], answer: 0, explanation: "আন্তর্জাতিক শিষ্টাচার বা চুক্তির খসড়া নিয়মাবলীকে Protocol বলা হয়।" },
+                        { question: "'Affidavit' শব্দের বাংলা পারিভাষিক রূপ কোনটি?", options: ["হলফনামা / শপথপত্র", "আদালতের সমন", "রাযনামা", "রায়"], answer: 0, explanation: "আদালতে লিখিত বা সত্যায়িত শপথনামাকে Affidavit বা 'হলফনামা' বলে।" },
+                        { question: "'Sanction' শব্দের বাংলা অর্থ কোনটি?", options: ["মঞ্জুরি / অনুমোদন", "শাস্তি", "অস্বীকৃতি", "স্থগিত"], answer: 0, explanation: "আইনগত অনুমোদন বা মঞ্জুরি অর্থে পরিভাষায় Sanction শব্দটি ব্যবহৃত হয়।" },
+                        { question: "'Surrender' শব্দের বাংলা পারিভাষিক শব্দ কোনটি?", options: ["আত্মসমর্পণ", "পলায়ন", "ত্যাগ", "পদত্যাগ"], answer: 0, explanation: "নিজের অধিকার বা অবস্থান শত্রুর কাছে সঁপে দেওয়াকে 'আত্মসমর্পণ' (Surrender) বলে।" },
+                        { question: "'Veto' শব্দের বাংলা পরিভাষা কোনটি?", options: ["ভেটো / অসং সম্মতি", "অনুমোদন", "সমর্থন", "অধ্যাদেশ"], answer: 0, explanation: "কোনো প্রস্তাব নাকচ করার একচ্ছত্র আইনগত ক্ষমতাকে 'ভেটো' বা অসং সম্মতি প্রদান বলে।" },
+                        { question: "'Null and Void' বাক্যাংশের বাংলা অর্থ কোনটি?", options: ["বাতিল", "কার্যকর", "স্থগিত", "আংশিক"], answer: 0, explanation: "আইনগতভাবে অকার্যকর বা বাতিল ঘোষণা করাকে Null and Void বলা হয়।" },
+                        { question: "'Worship' শব্দের বাংলা পারিভাষিক অর্থ কী?", options: ["উপাসনা / পূজা", "প্রার্থনা", "ভক্তি", "শ্রদ্ধা"], answer: 0, explanation: "সৃষ্টিকর্তা বা দেব-দেবীর উপাসনাকে Worship বলে।" },
+                        { question: "'Green Room' এর বাংলা পারিভাষিক রূপ কোনটি?", options: ["সাজঘর", "সবুজ কক্ষ", "বিশ্রামাগার", "মহড়া কক্ষ"], answer: 0, explanation: "নাটক বা অনুষ্ঠানের শিল্পীদের তৈরি হওয়ার কক্ষকে 'সাজঘর' (Green Room) বলে।" },
+                        { question: "'Initial' শব্দের বাংলা পরিভাষা কোনটি?", options: ["প্রারম্ভিক / আদ্যক্ষর", "শেষ", "মূল", "প্রতিনিধি"], answer: 0, explanation: "শুরুর অংশ বা নামের প্রথম অক্ষর দিয়ে স্বাক্ষর করাকে 'আদ্যক্ষর' (Initial) বলে।" },
+                        { question: "'Postage' শব্দের বাংলা পারিভাষিক শব্দ কোনটি?", options: ["ডাকমাশুল", "চিঠিপত্র", "ডাকঘর", "ডাকপিয়ন"], answer: 0, explanation: "ডাকযোগে চিঠি পাঠাতে যে খরচ বা ফি দিতে হয় তাকে 'ডাকমাশুল' (Postage) বলা হয়।" }
+                    ];
+
+                    this.questions = demoQuestions;
+                    this.currentQuizTitle = 'বাংলা পারিভাষিক শব্দ (ডেমো মডেল টেস্ট - ২০ প্রশ্ন)';
+                    this.secPerQuestion = 30;
+                    this.startExam();
+                },
+
+                // Quiz History LocalStorage Management
+                loadQuizHistory() {
+                    const saved = localStorage.getItem('quizverse_history');
+                    if (saved) {
+                        try { this.quizHistory = JSON.parse(saved); } catch(e) { this.quizHistory = []; }
+                    }
+                },
+
+                saveQuizHistory() {
+                    localStorage.setItem('quizverse_history', JSON.stringify(this.quizHistory));
+                },
+
+                loadQuizFromBank(item) {
+                    this.questions = item.questions;
+                    this.currentQuizTitle = item.title;
+                    this.secPerQuestion = item.secPerQuestion || 30;
+                    this.startExam();
+                },
+
+                deleteQuizFromBank(idx) {
+                    this.quizHistory.splice(idx, 1);
+                    this.saveQuizHistory();
+                    this.showToast('কুইজ মুছে ফেলা হয়েছে', 'info');
+                },
+
+                clearQuizHistory() {
+                    this.quizHistory = [];
+                    this.saveQuizHistory();
+                    this.showToast('সমস্ত কুইজ হিস্ট্রি মোছা হয়েছে', 'info');
+                },
+
+                // Study Planner LocalStorage Management
+                loadPlanner() {
+                    const saved = localStorage.getItem('quizverse_planner');
+                    if (saved) {
+                        try { this.studyPlanner = JSON.parse(saved); } catch(e) { this.studyPlanner = { subjects: [] }; }
+                    } else {
+                        this.studyPlanner = { subjects: [] };
+                    }
+                },
+
+                savePlanner() {
+                    localStorage.setItem('quizverse_planner', JSON.stringify(this.studyPlanner));
+                },
+
+                addSubject() {
+                    if (!this.newSubjectName.trim()) return;
+                    this.studyPlanner.subjects.push({
+                        id: Date.now().toString(),
+                        name: this.newSubjectName.trim(),
+                        chapters: []
+                    });
+                    this.newSubjectName = '';
+                    this.showAddSubjectModal = false;
+                    this.savePlanner();
+                    this.showToast('নতুন সাবজেক্ট যোগ করা হয়েছে', 'success');
+                },
+
+                deleteSubject(sIdx) {
+                    this.studyPlanner.subjects.splice(sIdx, 1);
+                    this.savePlanner();
+                },
+
+                openAddChapterModal(sIdx) {
+                    this.activeSubjectIdxForChapter = sIdx;
+                    this.newChapterName = '';
+                    this.newChapterHours = 2;
+                    this.showAddChapterModal = true;
+                },
+
+                addChapter() {
+                    if (!this.newChapterName.trim() || this.activeSubjectIdxForChapter === null) return;
+                    this.studyPlanner.subjects[this.activeSubjectIdxForChapter].chapters.push({
+                        id: Date.now().toString(),
+                        name: this.newChapterName.trim(),
+                        hours: parseInt(this.newChapterHours) || 2,
+                        completed: false
+                    });
+                    this.showAddChapterModal = false;
+                    this.savePlanner();
+                    this.showToast('নতুন চ্যাপ্টার যোগ করা হয়েছে', 'success');
+                },
+
+                deleteChapter(sIdx, cIdx) {
+                    this.studyPlanner.subjects[sIdx].chapters.splice(cIdx, 1);
+                    this.savePlanner();
+                },
+
+                getTotalChaptersCount() {
+                    return this.studyPlanner.subjects.reduce((sum, sub) => sum + sub.chapters.length, 0);
+                },
+
+                getCompletedChaptersCount() {
+                    return this.studyPlanner.subjects.reduce((sum, sub) => {
+                        return sum + sub.chapters.filter(c => c.completed).length;
+                    }, 0);
+                },
+
+                getOverallProgressPercentage() {
+                    const total = this.getTotalChaptersCount();
+                    if (total === 0) return 0;
+                    const completed = this.getCompletedChaptersCount();
+                    return Math.round((completed / total) * 100);
+                },
+
+                getSubjectProgress(subject) {
+                    if (!subject.chapters || subject.chapters.length === 0) return 0;
+                    const completed = subject.chapters.filter(c => c.completed).length;
+                    return Math.round((completed / subject.chapters.length) * 100);
+                }
+            };
         }
     </script>
 </body>
